@@ -1,207 +1,221 @@
 'use client';
 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { QuizSession, QuizQuestion } from '@/types';
-import { QuizService } from '@/lib/quiz';
+import { 
+  Trophy, 
+  Clock, 
+  Target, 
+  RotateCcw, 
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  Zap
+} from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Trophy, RotateCcw, Home, BookOpen, CheckCircle, XCircle } from 'lucide-react';
-import Link from 'next/link';
 
 interface QuizResultsProps {
-  session: QuizSession;
+  results: Array<{
+    questionId: string;
+    userAnswer: string;
+    isCorrect: boolean;
+    timeSpent: number;
+    xpEarned: number;
+    confidence?: number;
+  }>;
+  totalQuestions: number;
+  totalXP: number;
+  averageTime: number;
   onRestart: () => void;
+  onBack: () => void;
 }
 
-export function QuizResults({ session, onRestart }: QuizResultsProps) {
-  const score = QuizService.getQuizScore(session);
-  const wrongAnswers = QuizService.getWrongAnswers(session);
-  const totalTime = session.endTime ? session.endTime.getTime() - session.startTime.getTime() : 0;
-  const minutes = Math.floor(totalTime / 60000);
-  const seconds = Math.floor((totalTime % 60000) / 1000);
-
-  const getScoreColor = (percentage: number) => {
-    if (percentage >= 80) return 'text-green-600';
-    if (percentage >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+export function QuizResults({ 
+  results, 
+  totalQuestions, 
+  totalXP, 
+  averageTime, 
+  onRestart, 
+  onBack 
+}: QuizResultsProps) {
+  const correctAnswers = results.filter(r => r.isCorrect).length;
+  const accuracy = Math.round((correctAnswers / totalQuestions) * 100);
+  const totalTime = results.reduce((sum, r) => sum + r.timeSpent, 0);
+  
+  const getPerformanceMessage = () => {
+    if (accuracy >= 90) return { message: "Outstanding!", color: "text-green-600", icon: Trophy };
+    if (accuracy >= 80) return { message: "Great job!", color: "text-blue-600", icon: Target };
+    if (accuracy >= 70) return { message: "Good work!", color: "text-yellow-600", icon: CheckCircle };
+    return { message: "Keep practicing!", color: "text-orange-600", icon: XCircle };
   };
 
-  const getScoreMessage = (percentage: number) => {
-    if (percentage >= 90) return 'Excellent work! 🎉';
-    if (percentage >= 80) return 'Great job! 👍';
-    if (percentage >= 70) return 'Good effort! 💪';
-    if (percentage >= 60) return 'Not bad, keep practicing! 📚';
-    return 'Keep studying, you\'ll get there! 🌟';
+  const performance = getPerformanceMessage();
+  const PerformanceIcon = performance.icon;
+
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    return `${seconds}s`;
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="w-full max-w-4xl mx-auto space-y-6"
+      className="max-w-2xl mx-auto space-y-6"
     >
-      {/* Main Results Card */}
-      <Card className="text-center">
-        <CardHeader>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-          >
-            <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-          </motion.div>
-          <CardTitle className="text-3xl">Quiz Complete!</CardTitle>
-          <CardDescription className="text-lg">
-            {getScoreMessage(score.percentage)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Score Display */}
-          <div className="space-y-4">
-            <div className={`text-6xl font-bold ${getScoreColor(score.percentage)}`}>
-              {score.percentage}%
-            </div>
-            <div className="text-xl text-gray-600">
-              {score.correct} out of {score.total} correct
-            </div>
-            <Progress value={score.percentage} className="h-3" />
-          </div>
+      {/* Header */}
+      <div className="text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          className="mb-4"
+        >
+          <PerformanceIcon className={`w-16 h-16 mx-auto ${performance.color}`} />
+        </motion.div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Quiz Complete!
+        </h1>
+        <p className={`text-xl font-semibold ${performance.color}`}>
+          {performance.message}
+        </p>
+      </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-gray-900">{minutes}:{seconds.toString().padStart(2, '0')}</div>
-              <div className="text-sm text-gray-600">Time taken</div>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-gray-900">
-                {Math.round(totalTime / session.questions.length / 1000)}s
-              </div>
-              <div className="text-sm text-gray-600">Avg per question</div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={onRestart} size="lg" className="flex items-center gap-2">
-              <RotateCcw className="w-5 h-5" />
-              Try Again
-            </Button>
-            <Link href="/lessons">
-              <Button variant="outline" size="lg" className="flex items-center gap-2 w-full sm:w-auto">
-                <BookOpen className="w-5 h-5" />
-                Back to Lessons
-              </Button>
-            </Link>
-            <Link href="/">
-              <Button variant="outline" size="lg" className="flex items-center gap-2 w-full sm:w-auto">
-                <Home className="w-5 h-5" />
-                Home
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Wrong Answers Review */}
-      {wrongAnswers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-red-500" />
-              Review Wrong Answers
-            </CardTitle>
-            <CardDescription>
-              Study these words to improve your score next time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {wrongAnswers.map((question, index) => {
-                const result = session.results.find(r => r.questionId === question.id);
-                return (
-                  <motion.div
-                    key={question.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="p-4 border border-red-200 bg-red-50 rounded-lg"
-                  >
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-gray-500 mb-1">Question</div>
-                        <div className="font-semibold text-lg">{question.english}</div>
-                      </div>
-                      <div className="space-y-2">
-                        <div>
-                          <div className="text-sm text-gray-500 mb-1">Your answer</div>
-                          <div className="text-red-600 font-medium">{result?.selectedAnswer}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500 mb-1">Correct answer</div>
-                          <div className="text-green-600 font-medium">{question.correctAnswer}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All Questions Summary */}
+      {/* Main Stats */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-            All Questions
+            <Trophy className="w-5 h-5 text-yellow-500" />
+            Your Results
           </CardTitle>
-          <CardDescription>
-            Complete breakdown of your quiz performance
-          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {session.questions.map((question, index) => {
-              const result = session.results.find(r => r.questionId === question.id);
-              const isCorrect = result?.isCorrect;
-              
-              return (
-                <div
-                  key={question.id}
-                  className={`p-3 rounded-lg border ${
-                    isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{question.english}</div>
-                      <div className="text-sm text-gray-600">
-                        Correct: {question.correctAnswer}
-                        {!isCorrect && ` | Your answer: ${result?.selectedAnswer}`}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isCorrect ? (
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-500" />
-                      )}
-                      <span className="text-sm text-gray-500">
-                        {Math.round((result?.timeSpent || 0) / 1000)}s
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+        <CardContent className="space-y-6">
+          {/* Accuracy */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-700">Accuracy</span>
+              <span className="text-2xl font-bold text-gray-900">{accuracy}%</span>
+            </div>
+            <Progress value={accuracy} className="h-2" />
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>{correctAnswers} correct</span>
+              <span>{totalQuestions - correctAnswers} incorrect</span>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{totalXP}</div>
+              <div className="text-sm text-blue-700">XP Earned</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{formatTime(averageTime)}</div>
+              <div className="text-sm text-green-700">Avg. Time</div>
+            </div>
+          </div>
+
+          {/* Total Time */}
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-center gap-2 text-gray-600">
+              <Clock className="w-4 h-4" />
+              <span className="text-sm">Total time: {formatTime(totalTime)}</span>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Detailed Results */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-blue-500" />
+            Question Breakdown
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {results.map((result, index) => (
+              <motion.div
+                key={result.questionId}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`flex items-center justify-between p-3 rounded-lg border ${
+                  result.isCorrect 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-red-50 border-red-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {result.isCorrect ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  )}
+                  <span className="font-medium">Question {index + 1}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {formatTime(result.timeSpent)}
+                  </Badge>
+                  <Badge 
+                    variant={result.isCorrect ? "default" : "destructive"}
+                    className="text-xs"
+                  >
+                    +{result.xpEarned} XP
+                  </Badge>
+                  {result.confidence && result.confidence < 1 && (
+                    <Badge variant="outline" className="text-xs">
+                      {Math.round(result.confidence * 100)}% match
+                    </Badge>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex gap-4">
+        <Button
+          onClick={onBack}
+          variant="outline"
+          className="flex-1"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Quiz
+        </Button>
+        <Button
+          onClick={onRestart}
+          className="flex-1"
+        >
+          <RotateCcw className="w-4 h-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+
+      {/* XP Celebration */}
+      {totalXP > 0 && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
+        >
+          <div className="flex items-center justify-center gap-2 text-yellow-700">
+            <Zap className="w-5 h-5" />
+            <span className="font-semibold">You earned {totalXP} XP!</span>
+          </div>
+          <p className="text-sm text-yellow-600 mt-1">
+            Keep learning to level up and unlock achievements!
+          </p>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

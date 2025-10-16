@@ -3,35 +3,52 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Lesson, QuizSession } from '@/types';
+import { Lesson, QuizMode, QuizDirection, QuizSession } from '@/types';
 import { StorageService } from '@/lib/storage';
-import { QuizService } from '@/lib/quiz';
-import { QuizCard } from '@/components/quiz/QuizCard';
+import { EnhancedQuizService } from '@/lib/quiz-enhanced';
+import { EnhancedQuizCard } from '@/components/quiz/EnhancedQuizCard';
 import { QuizResults } from '@/components/quiz/QuizResults';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Play, Settings } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { 
+  Play, 
+  Settings, 
+  Brain, 
+  Keyboard, 
+  Volume2, 
+  Target, 
+  Trophy, 
+  Clock, 
+  Zap 
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { AuthGuard } from '@/components/auth/AuthGuard';
+import { PageContainer } from '@/components/layout/PageContainer';
 
 function QuizPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState<string>('');
+  const [quizMode, setQuizMode] = useState<QuizMode>('multiple-choice');
+  const [quizDirection, setQuizDirection] = useState<QuizDirection>('korean-to-english');
+  const [questionCount, setQuestionCount] = useState(10);
   const [quizSession, setQuizSession] = useState<QuizSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [settings, setSettings] = useState({
-    questionsPerQuiz: 10,
-    reverseMode: false,
-  });
 
   useEffect(() => {
     loadLessons();
     const lessonParam = searchParams.get('lesson');
-    if (lessonParam) {
-      setSelectedLessonId(lessonParam);
-    }
+    const modeParam = searchParams.get('mode') as QuizMode;
+    const directionParam = searchParams.get('direction') as QuizDirection;
+    
+    if (lessonParam) setSelectedLessonId(lessonParam);
+    if (modeParam) setQuizMode(modeParam);
+    if (directionParam) setQuizDirection(directionParam);
   }, [searchParams]);
 
   // Auto-adjust quiz questions when lesson changes
@@ -40,12 +57,12 @@ function QuizPageContent() {
       const lesson = lessons.find(l => l.id === selectedLessonId);
       if (lesson && lesson.words.length > 0) {
         // If current setting is higher than available words, adjust it
-        if (settings.questionsPerQuiz > lesson.words.length) {
-          setSettings(prev => ({ ...prev, questionsPerQuiz: lesson.words.length }));
+        if (questionCount > lesson.words.length) {
+          setQuestionCount(lesson.words.length);
         }
       }
     }
-  }, [selectedLessonId, lessons, settings.questionsPerQuiz]);
+  }, [selectedLessonId, lessons, questionCount]);
 
   const loadLessons = () => {
     const storedLessons = StorageService.getLessons();
@@ -53,7 +70,7 @@ function QuizPageContent() {
     setIsLoading(false);
   };
 
-  const startQuiz = () => {
+  const startQuiz = async () => {
     if (!selectedLessonId) {
       toast.error('Please select a lesson');
       return;
@@ -70,32 +87,77 @@ function QuizPageContent() {
       return;
     }
 
-    const session = QuizService.createQuizSession(
-      lesson,
-      Math.min(settings.questionsPerQuiz, lesson.words.length),
-      settings.reverseMode
-    );
+    try {
+      const session = EnhancedQuizService.createQuizSession(
+        lesson,
+        Math.min(questionCount, lesson.words.length),
+        quizMode,
+        quizDirection
+      );
 
-    setQuizSession(session);
-    toast.success(`Started quiz with ${session.questions.length} questions`);
+      if (!session.questions || session.questions.length === 0) {
+        toast.error('Failed to generate questions. Please check your lesson has words.');
+        return;
+      }
+
+      setQuizSession(session);
+      toast.success(`Started ${quizMode} quiz with ${session.questions.length} questions`);
+    } catch (error) {
+      console.error('Failed to start quiz:', error);
+      toast.error('Failed to start quiz');
+    }
   };
 
   const handleAnswer = (answer: string, timeSpent: number) => {
     if (!quizSession) return;
 
-    const updatedSession = QuizService.submitAnswer(quizSession, answer, timeSpent);
+    // Store the answer and time spent, but don't advance the quiz yet
+    // The quiz will only advance when user clicks "Next"
+    const currentQuestion = quizSession.questions[quizSession.currentQuestionIndex];
+    
+    // Create a result for this question
+    const result = {
+      questionId: currentQuestion.id,
+      userAnswer: answer,
+      isCorrect: false, // Will be evaluated when user clicks Next
+      timeSpent: timeSpent,
+      xpEarned: 0, // Will be calculated when user clicks Next
+      confidence: 1.0
+    };
+
+    // Update session with the result but don't advance
+    const updatedSession = {
+      ...quizSession,
+      results: [...quizSession.results, result]
+    };
+    
     setQuizSession(updatedSession);
   };
 
   const handleNext = () => {
     if (!quizSession) return;
 
-    if (quizSession.isCompleted) {
-      // Quiz is complete, results will be shown
-      return;
+    // Get the current question and the last result
+    const currentQuestion = quizSession.questions[quizSession.currentQuestionIndex];
+    const lastResult = quizSession.results[quizSession.results.length - 1];
+    
+    if (lastResult && lastResult.questionId === currentQuestion.id) {
+      // Evaluate the answer and update the result
+      const { session: updatedSession } = EnhancedQuizService.submitAnswer(
+        quizSession, 
+        lastResult.userAnswer, 
+        lastResult.timeSpent
+      );
+      setQuizSession(updatedSession);
+    } else {
+      // No answer submitted yet, just advance to next question
+      const nextSession = {
+        ...quizSession,
+        currentQuestionIndex: quizSession.currentQuestionIndex + 1,
+        isCompleted: quizSession.currentQuestionIndex + 1 >= quizSession.questions.length
+      };
+      setQuizSession(nextSession);
     }
-
-    // Move to next question (this is handled by the QuizCard component)
   };
 
   const restartQuiz = () => {
@@ -131,15 +193,43 @@ function QuizPageContent() {
   if (quizSession && !quizSession.isCompleted) {
     const currentQuestion = quizSession.questions[quizSession.currentQuestionIndex];
     
+    // Check if current question exists
+    if (!currentQuestion) {
+      console.error('Current question is undefined:', {
+        currentQuestionIndex: quizSession.currentQuestionIndex,
+        totalQuestions: quizSession.questions.length,
+        questions: quizSession.questions
+      });
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <Card className="max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="text-red-600">Quiz Error</CardTitle>
+              <CardDescription>
+                There was an error loading the current question.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => setQuizSession(null)} className="w-full">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Quiz Setup
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    
     return (
       <div className="container mx-auto px-4 py-8">
-        <QuizCard
+        <EnhancedQuizCard
           key={currentQuestion.id} // Force re-render for each new question
           question={currentQuestion}
           questionNumber={quizSession.currentQuestionIndex + 1}
           totalQuestions={quizSession.questions.length}
           onAnswer={handleAnswer}
           onNext={handleNext}
+          lastResult={quizSession.results.find(r => r.questionId === currentQuestion.id)}
         />
       </div>
     );
@@ -147,160 +237,293 @@ function QuizPageContent() {
 
   // Show quiz setup
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
+    <PageContainer>
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
           <div className="flex items-center gap-3 mb-4">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => router.push('/')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back
-            </Button>
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Start Quiz</h1>
-            <p className="text-gray-600 mt-1">
-              Test your Korean vocabulary knowledge
+            <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
+              <Brain className="w-10 h-10 text-indigo-600" />
+              Enhanced Quiz
+            </h1>
+            <p className="text-xl text-gray-600 mt-2">
+              Advanced Korean vocabulary training with multiple modes and spaced repetition
             </p>
           </div>
-        </div>
+        </motion.div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Quiz Settings
-            </CardTitle>
-            <CardDescription>
-              Choose a lesson and configure your quiz preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Lesson Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Select Lesson</label>
-              <Select value={selectedLessonId} onValueChange={setSelectedLessonId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a lesson to quiz on" />
-                </SelectTrigger>
-                <SelectContent>
-                  {lessons.map((lesson) => (
-                    <SelectItem 
-                      key={lesson.id} 
-                      value={lesson.id}
-                      disabled={lesson.words.length === 0}
-                    >
-                      {lesson.name} ({lesson.words.length} words)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {lessons.length === 0 && (
-                <p className="text-sm text-gray-500">
-                  No lessons available. <Link href="/lessons" className="text-blue-500 hover:underline">Create a lesson first</Link>.
-                </p>
-              )}
-            </div>
-
-            {/* Quiz Mode */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Quiz Mode</label>
-              <Select 
-                value={settings.reverseMode ? 'reverse' : 'normal'} 
-                onValueChange={(value) => setSettings(prev => ({ ...prev, reverseMode: value === 'reverse' }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="normal">English → Korean</SelectItem>
-                  <SelectItem value="reverse">Korean → English</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Number of Questions */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">Number of Questions</label>
-                {selectedLesson && selectedLesson.words.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSettings(prev => ({ ...prev, questionsPerQuiz: selectedLesson.words.length }))}
-                    className="text-xs"
-                  >
-                    Use All {selectedLesson.words.length} Words
-                  </Button>
-                )}
-              </div>
-              <Select 
-                value={settings.questionsPerQuiz.toString()} 
-                onValueChange={(value) => setSettings(prev => ({ ...prev, questionsPerQuiz: parseInt(value) }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 questions</SelectItem>
-                  <SelectItem value="10">10 questions</SelectItem>
-                  <SelectItem value="15">15 questions</SelectItem>
-                  <SelectItem value="20">20 questions</SelectItem>
-                  <SelectItem value="25">25 questions</SelectItem>
-                  <SelectItem value="30">30 questions</SelectItem>
-                  {selectedLesson && selectedLesson.words.length > 30 && (
-                    <SelectItem value={selectedLesson.words.length.toString()}>
-                      All {selectedLesson.words.length} questions
-                    </SelectItem>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Quiz Settings */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-2"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Quiz Configuration
+                </CardTitle>
+                <CardDescription>
+                  Choose your lesson and customize the quiz experience
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Lesson Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Select Lesson</label>
+                  <Select value={selectedLessonId} onValueChange={setSelectedLessonId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a lesson to quiz on" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lessons.map((lesson) => (
+                        <SelectItem 
+                          key={lesson.id} 
+                          value={lesson.id}
+                          disabled={lesson.words.length === 0}
+                        >
+                          {lesson.name} ({lesson.words.length} words)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {lessons.length === 0 && (
+                    <p className="text-sm text-gray-500">
+                      No lessons available. <Link href="/lessons" className="text-blue-500 hover:underline">Create a lesson first</Link>.
+                    </p>
                   )}
-                </SelectContent>
-              </Select>
-              {selectedLesson && (
-                <p className="text-sm text-gray-500">
-                  Maximum: {selectedLesson.words.length} questions (based on lesson size)
-                </p>
-              )}
-            </div>
+                </div>
 
-            {/* Start Button */}
-            <div className="pt-4">
-              <Button 
-                onClick={startQuiz} 
-                size="lg" 
-                className="w-full"
-                disabled={!selectedLessonId || !selectedLesson || selectedLesson.words.length === 0}
-              >
-                <Play className="w-5 h-5 mr-2" />
-                Start Quiz
-              </Button>
-            </div>
+                {/* Quiz Mode */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Quiz Mode</label>
+                  <Select value={quizMode} onValueChange={(value: QuizMode) => setQuizMode(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="multiple-choice">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4" />
+                          Multiple Choice
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="typing">
+                        <div className="flex items-center gap-2">
+                          <Keyboard className="w-4 h-4" />
+                          Typing Practice
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="dictation">
+                        <div className="flex items-center gap-2">
+                          <Volume2 className="w-4 h-4" />
+                          Listen & Write
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Quiz Direction */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Direction</label>
+                  <Select value={quizDirection} onValueChange={(value: QuizDirection) => setQuizDirection(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="korean-to-english">Korean → English</SelectItem>
+                      <SelectItem value="english-to-korean">English → Korean</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Number of Questions */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">Number of Questions</label>
+                    {selectedLesson && selectedLesson.words.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQuestionCount(selectedLesson.words.length)}
+                        className="text-xs"
+                      >
+                        Use All {selectedLesson.words.length} Words
+                      </Button>
+                    )}
+                  </div>
+                  <Select 
+                    value={questionCount.toString()} 
+                    onValueChange={(value) => setQuestionCount(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 questions</SelectItem>
+                      <SelectItem value="10">10 questions</SelectItem>
+                      <SelectItem value="15">15 questions</SelectItem>
+                      <SelectItem value="20">20 questions</SelectItem>
+                      <SelectItem value="25">25 questions</SelectItem>
+                      <SelectItem value="30">30 questions</SelectItem>
+                      {selectedLesson && selectedLesson.words.length > 30 && (
+                        <SelectItem value={selectedLesson.words.length.toString()}>
+                          All {selectedLesson.words.length} questions
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {selectedLesson && (
+                    <p className="text-sm text-gray-500">
+                      Maximum: {selectedLesson.words.length} questions (based on lesson size)
+                    </p>
+                  )}
+                </div>
+
+                {/* Start Button */}
+                <div className="pt-4">
+                  <Button 
+                    onClick={startQuiz} 
+                    size="lg" 
+                    className="w-full"
+                    disabled={!selectedLessonId || !selectedLesson || selectedLesson.words.length === 0}
+                  >
+                    <Play className="w-5 h-5 mr-2" />
+                    Start Enhanced Quiz
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Quiz Info Panel */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-6"
+          >
+            {/* Mode Description */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Quiz Mode
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {quizMode === 'multiple-choice' && (
+                    <div className="flex items-start gap-3">
+                      <Target className="w-5 h-5 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-gray-900">Multiple Choice</p>
+                        <p className="text-sm text-gray-600">Choose the correct answer from options</p>
+                      </div>
+                    </div>
+                  )}
+                  {quizMode === 'typing' && (
+                    <div className="flex items-start gap-3">
+                      <Keyboard className="w-5 h-5 text-green-500 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-gray-900">Typing Practice</p>
+                        <p className="text-sm text-gray-600">Type the correct answer with fuzzy matching</p>
+                      </div>
+                    </div>
+                  )}
+                  {quizMode === 'dictation' && (
+                    <div className="flex items-start gap-3">
+                      <Volume2 className="w-5 h-5 text-purple-500 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-gray-900">Listen & Write</p>
+                        <p className="text-sm text-gray-600">Listen to pronunciation and type the answer</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Lesson Info */}
             {selectedLesson && (
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h3 className="font-semibold text-blue-900 mb-2">{selectedLesson.name}</h3>
-                <p className="text-blue-700 text-sm">
-                  {selectedLesson.words.length} words available • 
-                  Quiz will use {Math.min(settings.questionsPerQuiz, selectedLesson.words.length)} questions
-                </p>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5" />
+                    Lesson Info
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{selectedLesson.name}</h3>
+                      <p className="text-sm text-gray-600">{selectedLesson.description}</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Clock className="w-4 h-4" />
+                      <span>{selectedLesson.words.length} words available</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Target className="w-4 h-4" />
+                      <span>Quiz will use {Math.min(questionCount, selectedLesson.words.length)} questions</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+
+            {/* Features */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="w-5 h-5" />
+                  Features
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Spaced Repetition System</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>XP & Level Progression</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span>Audio Pronunciation</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <span>Smart Hints & Feedback</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
 export default function QuizPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <QuizPageContent />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={<div>Loading...</div>}>
+        <QuizPageContent />
+      </Suspense>
+    </AuthGuard>
   );
 }

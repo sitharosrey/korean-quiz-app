@@ -1,9 +1,18 @@
-import { Lesson, AppSettings } from '@/types';
+import { Lesson, AppSettings, UserProgress, MatchGameSession, WordPair, SPACED_REPETITION_INTERVALS } from '@/types';
+import { AuthService } from './auth';
 
 const STORAGE_KEYS = {
   LESSONS: 'korean-flashcard-lessons',
   SETTINGS: 'korean-flashcard-settings',
+  PROGRESS: 'korean-flashcard-progress',
+  MATCH_GAMES: 'korean-flashcard-match-games',
 } as const;
+
+// Helper function to get current user ID
+const getCurrentUserId = (): string | null => {
+  const currentUser = AuthService.getCurrentUser();
+  return currentUser?.id || null;
+};
 
 export class StorageService {
   // Lessons
@@ -15,10 +24,23 @@ export class StorageService {
       if (!stored) return [];
       
       const lessons = JSON.parse(stored);
-      return lessons.map((lesson: Lesson) => ({
+      const currentUserId = getCurrentUserId();
+      
+      // Filter lessons by current user, or return all if no user is logged in (for backward compatibility)
+      const filteredLessons = currentUserId 
+        ? lessons.filter((lesson: Lesson) => lesson.userId === currentUserId)
+        : lessons.filter((lesson: Lesson) => !lesson.userId); // Legacy lessons without userId
+      
+      return filteredLessons.map((lesson: Lesson) => ({
         ...lesson,
+        userId: lesson.userId || currentUserId || 'anonymous', // Ensure userId is set
         createdAt: new Date(lesson.createdAt),
         updatedAt: new Date(lesson.updatedAt),
+        words: lesson.words.map((word: WordPair) => ({
+          ...word,
+          nextReviewDate: new Date(word.nextReviewDate),
+          lastReviewed: word.lastReviewed ? new Date(word.lastReviewed) : undefined,
+        })),
       }));
     } catch (error) {
       console.error('Error loading lessons:', error);
@@ -36,25 +58,67 @@ export class StorageService {
     }
   }
 
+  // Helper methods for working with all lessons (not filtered by user)
+  private static getAllLessons(): Lesson[] {
+    if (typeof window === 'undefined') return [];
+    
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.LESSONS);
+      if (!stored) return [];
+      
+      const lessons = JSON.parse(stored);
+      return lessons.map((lesson: Lesson) => ({
+        ...lesson,
+        createdAt: new Date(lesson.createdAt),
+        updatedAt: new Date(lesson.updatedAt),
+        words: lesson.words.map((word: WordPair) => ({
+          ...word,
+          nextReviewDate: new Date(word.nextReviewDate),
+          lastReviewed: word.lastReviewed ? new Date(word.lastReviewed) : undefined,
+        })),
+      }));
+    } catch (error) {
+      console.error('Error loading all lessons:', error);
+      return [];
+    }
+  }
+
+  private static saveAllLessons(lessons: Lesson[]): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      localStorage.setItem(STORAGE_KEYS.LESSONS, JSON.stringify(lessons));
+    } catch (error) {
+      console.error('Error saving all lessons:', error);
+    }
+  }
+
   static addLesson(lesson: Lesson): void {
-    const lessons = this.getLessons();
-    lessons.push(lesson);
-    this.saveLessons(lessons);
+    const currentUserId = getCurrentUserId();
+    const lessonWithUserId = {
+      ...lesson,
+      userId: lesson.userId || currentUserId || 'anonymous',
+    };
+    
+    // Get all lessons (not filtered by user)
+    const allLessons = this.getAllLessons();
+    allLessons.push(lessonWithUserId);
+    this.saveAllLessons(allLessons);
   }
 
   static updateLesson(updatedLesson: Lesson): void {
-    const lessons = this.getLessons();
-    const index = lessons.findIndex(l => l.id === updatedLesson.id);
+    const allLessons = this.getAllLessons();
+    const index = allLessons.findIndex(l => l.id === updatedLesson.id);
     if (index !== -1) {
-      lessons[index] = { ...updatedLesson, updatedAt: new Date() };
-      this.saveLessons(lessons);
+      allLessons[index] = { ...updatedLesson, updatedAt: new Date() };
+      this.saveAllLessons(allLessons);
     }
   }
 
   static deleteLesson(lessonId: string): void {
-    const lessons = this.getLessons();
-    const filtered = lessons.filter(l => l.id !== lessonId);
-    this.saveLessons(filtered);
+    const allLessons = this.getAllLessons();
+    const filtered = allLessons.filter(l => l.id !== lessonId);
+    this.saveAllLessons(filtered);
   }
 
   // Settings
@@ -62,8 +126,17 @@ export class StorageService {
     const defaultSettings: AppSettings = {
       groqApiKey: undefined,
       defaultLanguage: 'korean' as const,
-      quizMode: 'english-to-korean' as const,
+      quizMode: 'multiple-choice' as const,
+      quizDirection: 'korean-to-english' as const,
       questionsPerQuiz: 10,
+      enableSpacedRepetition: true,
+      enablePronunciation: true,
+      enableContextSentences: true,
+      enableImages: true,
+      autoFetchImages: false,
+      audioRate: 0.8,
+      audioPitch: 1.0,
+      audioVolume: 1.0,
     };
 
     if (typeof window === 'undefined') {
@@ -108,5 +181,173 @@ export class StorageService {
     } catch (error) {
       console.error('Error saving settings:', error);
     }
+  }
+
+  // Progress tracking
+  static getProgress(): UserProgress {
+    const currentUserId = getCurrentUserId();
+    const defaultProgress: UserProgress = {
+      userId: currentUserId || 'anonymous',
+      totalXP: 0,
+      currentLevel: 1,
+      currentStreak: 0,
+      longestStreak: 0,
+      totalWordsLearned: 0,
+      totalQuizzesCompleted: 0,
+      totalTimeSpent: 0,
+      // Enhanced progress tracking
+      wordsMastered: 0,
+      dailyGoal: 10,
+      weeklyGoal: 50,
+      achievements: [],
+    };
+
+    if (typeof window === 'undefined') return defaultProgress;
+    
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.PROGRESS);
+      if (!stored) return defaultProgress;
+      
+      const parsed = JSON.parse(stored);
+      // Handle both old format (single object) and new format (array)
+      const allProgress = Array.isArray(parsed) ? parsed : [parsed];
+      const userProgress = allProgress.find((p: UserProgress) => p.userId === currentUserId);
+      
+      if (!userProgress) return defaultProgress;
+      
+      return {
+        ...defaultProgress,
+        ...userProgress,
+        lastStudyDate: userProgress.lastStudyDate ? new Date(userProgress.lastStudyDate) : undefined,
+      };
+    } catch (error) {
+      console.error('Error loading progress:', error);
+      return defaultProgress;
+    }
+  }
+
+  static saveProgress(progress: UserProgress): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const currentUserId = getCurrentUserId();
+      const progressWithUserId = {
+        ...progress,
+        userId: progress.userId || currentUserId || 'anonymous',
+      };
+      
+      // Get all progress data
+      const stored = localStorage.getItem(STORAGE_KEYS.PROGRESS);
+      let allProgress: UserProgress[] = [];
+      
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Handle both old format (single object) and new format (array)
+        allProgress = Array.isArray(parsed) ? parsed : [parsed];
+      }
+      
+      // Update or add user progress
+      const existingIndex = allProgress.findIndex(p => p.userId === progressWithUserId.userId);
+      if (existingIndex !== -1) {
+        allProgress[existingIndex] = progressWithUserId;
+      } else {
+        allProgress.push(progressWithUserId);
+      }
+      
+      localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(allProgress));
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    }
+  }
+
+  // Match game sessions
+  static getMatchGameSessions(): MatchGameSession[] {
+    if (typeof window === 'undefined') return [];
+    
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.MATCH_GAMES);
+      if (!stored) return [];
+      
+      const sessions = JSON.parse(stored);
+      return sessions.map((session: MatchGameSession) => ({
+        ...session,
+        startTime: new Date(session.startTime),
+        endTime: session.endTime ? new Date(session.endTime) : undefined,
+      }));
+    } catch (error) {
+      console.error('Error loading match game sessions:', error);
+      return [];
+    }
+  }
+
+  static saveMatchGameSessions(sessions: MatchGameSession[]): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      localStorage.setItem(STORAGE_KEYS.MATCH_GAMES, JSON.stringify(sessions));
+    } catch (error) {
+      console.error('Error saving match game sessions:', error);
+    }
+  }
+
+  static addMatchGameSession(session: MatchGameSession): void {
+    const sessions = this.getMatchGameSessions();
+    sessions.push(session);
+    this.saveMatchGameSessions(sessions);
+  }
+
+  // Utility methods for spaced repetition
+  static createNewWordPair(korean: string, english: string, imageUrl?: string): WordPair {
+    return {
+      id: `word-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      korean,
+      english,
+      imageUrl,
+      difficulty: 0,
+      nextReviewDate: new Date(), // Review immediately for new words
+      reviewCount: 0,
+      correctStreak: 0,
+      // Enhanced SRS fields
+      level: 0,
+      nextReview: new Date(),
+      totalXP: 0,
+    };
+  }
+
+  static updateWordDifficulty(word: WordPair, isCorrect: boolean): WordPair {
+    const updatedWord = { ...word };
+    
+    if (isCorrect) {
+      updatedWord.correctStreak += 1;
+      updatedWord.difficulty = Math.min(5, updatedWord.difficulty + 1);
+    } else {
+      updatedWord.correctStreak = 0;
+      updatedWord.difficulty = Math.max(0, updatedWord.difficulty - 1);
+    }
+    
+    updatedWord.reviewCount += 1;
+    updatedWord.lastReviewed = new Date();
+    
+    // Calculate next review date based on difficulty
+    const intervalIndex = Math.min(updatedWord.difficulty, SPACED_REPETITION_INTERVALS.length - 1);
+    const daysToAdd = SPACED_REPETITION_INTERVALS[intervalIndex];
+    updatedWord.nextReviewDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+    
+    return updatedWord;
+  }
+
+  static getWordsForReview(lessons: Lesson[]): WordPair[] {
+    const now = new Date();
+    const wordsForReview: WordPair[] = [];
+    
+    lessons.forEach(lesson => {
+      lesson.words.forEach(word => {
+        if (word.nextReviewDate <= now) {
+          wordsForReview.push(word);
+        }
+      });
+    });
+    
+    return wordsForReview;
   }
 }

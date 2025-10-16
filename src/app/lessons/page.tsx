@@ -8,8 +8,18 @@ import { LessonForm } from '@/components/lesson/LessonForm';
 import { LessonCard } from '@/components/lesson/LessonCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { BookOpen } from 'lucide-react';
+import { AuthGuard } from '@/components/auth/AuthGuard';
+import { PageContainer } from '@/components/layout/PageContainer';
 
 export default function LessonsPage() {
+  return (
+    <AuthGuard>
+      <LessonsPageContent />
+    </AuthGuard>
+  );
+}
+
+function LessonsPageContent() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -50,7 +60,7 @@ export default function LessonsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <PageContainer>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lessons</h1>
@@ -84,6 +94,6 @@ export default function LessonsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

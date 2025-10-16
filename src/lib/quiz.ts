@@ -1,4 +1,6 @@
 import { Lesson, QuizQuestion, QuizSession, WordPair } from '@/types';
+import { StorageService } from './storage';
+import { ProgressService } from './progress';
 
 export class QuizService {
   static generateQuizQuestions(lesson: Lesson, questionCount: number = 10): QuizQuestion[] {
@@ -57,10 +59,27 @@ export class QuizService {
     });
   }
 
-  static createQuizSession(lesson: Lesson, questionCount: number = 10, reverseMode: boolean = false): QuizSession {
+  static createQuizSession(lesson: Lesson, questionCount: number = 10, reverseMode: boolean = false, useSpacedRepetition: boolean = true): QuizSession {
+    let wordsToUse = lesson.words;
+    
+    // If spaced repetition is enabled, prioritize words that need review
+    if (useSpacedRepetition) {
+      const wordsForReview = StorageService.getWordsForReview([lesson]);
+      const otherWords = lesson.words.filter(word => !wordsForReview.some(w => w.id === word.id));
+      
+      // Mix review words with other words (prioritize review words)
+      const reviewWordsCount = Math.min(wordsForReview.length, Math.ceil(questionCount * 0.6));
+      const otherWordsCount = Math.min(otherWords.length, questionCount - reviewWordsCount);
+      
+      wordsToUse = [
+        ...wordsForReview.slice(0, reviewWordsCount),
+        ...otherWords.slice(0, otherWordsCount)
+      ];
+    }
+    
     const questions = reverseMode 
-      ? this.generateReverseQuizQuestions(lesson, questionCount)
-      : this.generateQuizQuestions(lesson, questionCount);
+      ? this.generateReverseQuizQuestions({ ...lesson, words: wordsToUse }, questionCount)
+      : this.generateQuizQuestions({ ...lesson, words: wordsToUse }, questionCount);
 
     return {
       id: `quiz-${Date.now()}`,
@@ -76,6 +95,9 @@ export class QuizService {
   static submitAnswer(session: QuizSession, selectedAnswer: string, timeSpent: number): QuizSession {
     const currentQuestion = session.questions[session.currentQuestionIndex];
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+    
+    // Update spaced repetition data for the word
+    this.updateWordProgress(currentQuestion, isCorrect);
     
     const result = {
       questionId: currentQuestion.id,
@@ -95,6 +117,40 @@ export class QuizService {
       isCompleted,
       endTime: isCompleted ? new Date() : undefined,
     };
+  }
+
+  static updateWordProgress(question: QuizQuestion, isCorrect: boolean): void {
+    // Find the word in the lesson and update its progress
+    const lessons = StorageService.getLessons();
+    const lesson = lessons.find(l => l.id === question.id.split('-')[0]); // Extract lesson ID from question ID
+    
+    if (!lesson) return;
+    
+    // Find the word that corresponds to this question
+    const word = lesson.words.find(w => 
+      w.korean === question.correctKorean || w.english === question.correctKorean
+    );
+    
+    if (!word) return;
+    
+    // Update word difficulty using spaced repetition
+    const updatedWord = StorageService.updateWordDifficulty(word, isCorrect);
+    
+    // Update the lesson with the modified word
+    const updatedWords = lesson.words.map(w => w.id === word.id ? updatedWord : w);
+    const updatedLesson = { ...lesson, words: updatedWords };
+    
+    StorageService.updateLesson(updatedLesson);
+    
+    // Update user progress
+    const progress = StorageService.getProgress();
+    const updatedProgress = ProgressService.updateStreak(progress);
+    
+    // Award XP based on performance
+    const xpAward = isCorrect ? 10 : 5; // More XP for correct answers
+    const progressWithXP = ProgressService.addXP(updatedProgress, xpAward);
+    
+    StorageService.saveProgress(progressWithXP);
   }
 
   static getQuizScore(session: QuizSession): { correct: number; total: number; percentage: number } {

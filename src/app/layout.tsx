@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navigation } from "@/components/layout/Navigation";
-import { Footer } from "@/components/layout/Footer";
+import { ConditionalLayout } from "@/components/layout/ConditionalLayout";
 import { Toaster } from "@/components/ui/sonner";
+import { UserProvider } from "@/contexts/UserContext";
+import "@/lib/demo-users"; // Demo user utilities
+import "@/lib/clear-users"; // Clear users utility
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Korean Flashcard Trainer",
+  title: "Korean Learner",
   description: "Learn Korean vocabulary with interactive flashcards and OCR-powered word extraction",
 };
 
@@ -28,14 +30,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 flex flex-col min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}
       >
-        <Navigation />
-        <main className="flex-1">
-          {children}
-        </main>
-        <Footer />
-        <Toaster />
+        <UserProvider>
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
+          <Toaster />
+        </UserProvider>
       </body>
     </html>
   );

@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { PronunciationButton } from '@/components/ui/pronunciation-button';
 import { QuizQuestion } from '@/types';
+import { StorageService } from '@/lib/storage';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Volume2 } from 'lucide-react';
 
 interface QuizCardProps {
   question: QuizQuestion;
@@ -21,6 +23,7 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
+  const [settings, setSettings] = useState(StorageService.getSettings());
 
   const progress = (questionNumber / totalQuestions) * 100;
 
@@ -90,9 +93,18 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
         <CardContent className="space-y-6">
           {/* Question */}
           <div className="text-center py-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              {question.english}
-            </h2>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <h2 className="text-3xl font-bold text-gray-900">
+                {question.english}
+              </h2>
+              {settings.enablePronunciation && (
+                <PronunciationButton
+                  text={question.english}
+                  language="english"
+                  size="md"
+                />
+              )}
+            </div>
             <p className="text-gray-600">Choose the correct Korean translation</p>
           </div>
 
@@ -112,7 +124,18 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
                   disabled={showResult}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span>{option}</span>
+                    <div className="flex items-center gap-2">
+                      <span>{option}</span>
+                      {settings.enablePronunciation && (
+                        <PronunciationButton
+                          text={option}
+                          language="korean"
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                        />
+                      )}
+                    </div>
                     {showResult && option === question.correctAnswer && (
                       <CheckCircle className="w-5 h-5" />
                     )}

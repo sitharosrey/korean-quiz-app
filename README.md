@@ -1,15 +1,18 @@
 # Korean Flashcard Trainer
 
-A modern, full-stack web application for learning Korean vocabulary using interactive flashcards, OCR-powered word extraction, and personalized lessons.
+A modern, full-stack web application for learning Korean vocabulary with advanced memory-enhancing features including spaced repetition, pronunciation practice, context sentences, interactive games, and progress tracking.
 
 ## Features
 
 ### 🎯 Core Features
-- **Image Upload & OCR**: Upload images containing Korean text and automatically extract vocabulary using Groq AI
-- **Manual Word Entry**: Add Korean-English word pairs manually
+- **Spaced Repetition**: Smart review system that adapts to your learning pace and memory retention
+- **Pronunciation Practice**: Hear correct Korean pronunciation using browser speech synthesis
+- **Context Sentences**: AI-generated example sentences to understand word usage in context
+- **Interactive Games**: Match the Pairs memory game for fun vocabulary practice
+- **Progress Dashboard**: Track your learning journey with XP, streaks, and detailed statistics
+- **Image Attachments**: Add visual memory aids with auto-fetched or uploaded images
 - **Lesson Management**: Create, organize, and manage custom vocabulary lessons
 - **Interactive Quizzes**: Test your knowledge with multiple-choice quizzes
-- **Progress Tracking**: Monitor your learning progress and review wrong answers
 - **Bidirectional Learning**: Practice both Korean → English and English → Korean
 
 ### 🎨 UI/UX Features
@@ -73,10 +76,12 @@ A modern, full-stack web application for learning Korean vocabulary using intera
 
 ### Using the App
 
-1. **Home Page**: Overview of features and quick access to lessons and quizzes
+1. **Home Page**: Overview of features and quick access to lessons, quizzes, and games
 2. **Lessons**: Create and manage your vocabulary lessons
-3. **Quiz**: Test your knowledge with interactive flashcards
-4. **Settings**: Configure your preferences and API keys
+3. **Quiz**: Test your knowledge with interactive flashcards featuring spaced repetition
+4. **Games**: Play Match the Pairs memory game for fun practice
+5. **Dashboard**: View your progress, XP, streaks, and learning statistics
+6. **Settings**: Configure your preferences, API keys, and feature toggles
 
 ### Demo Data
 
@@ -94,19 +99,28 @@ src/
 ├── app/                    # Next.js App Router pages
 │   ├── lessons/           # Lesson management pages
 │   ├── quiz/              # Quiz functionality
+│   ├── games/             # Interactive games
+│   │   └── match-pairs/   # Match the Pairs game
+│   ├── dashboard/         # Progress dashboard
 │   ├── settings/          # Settings page
 │   └── layout.tsx         # Root layout
 ├── components/            # React components
 │   ├── layout/           # Layout components
 │   ├── lesson/           # Lesson-related components
 │   ├── quiz/             # Quiz components
+│   ├── games/            # Game components
+│   ├── dashboard/        # Dashboard components
 │   ├── word-input/       # Word input components
 │   └── ui/               # Shadcn UI components
 ├── lib/                  # Utility functions
 │   ├── demo-data.ts      # Demo lesson data
 │   ├── groq.ts          # Groq API integration
-│   ├── quiz.ts          # Quiz logic
+│   ├── quiz.ts          # Quiz logic with spaced repetition
 │   ├── storage.ts       # Local storage utilities
+│   ├── progress.ts      # Progress tracking
+│   ├── pronunciation.ts # Speech synthesis
+│   ├── match-game.ts    # Match game logic
+│   ├── image-service.ts # Image fetching
 │   └── utils.ts         # General utilities
 └── types/               # TypeScript type definitions
     └── index.ts
@@ -131,11 +145,19 @@ src/
 - Optional English translation
 - Batch processing of multiple words
 
+### Enhanced Learning Features
+- **Spaced Repetition**: Smart review intervals based on memory science
+- **Pronunciation Practice**: Browser-based speech synthesis for Korean words
+- **Context Sentences**: AI-generated examples using Groq API
+- **Progress Tracking**: XP system, learning streaks, and detailed statistics
+- **Interactive Games**: Match the Pairs memory game for fun practice
+- **Visual Memory**: Image attachments for better retention
+
 ### Quiz System
-- Multiple choice questions
+- Multiple choice questions with spaced repetition integration
 - Configurable question count (5-25)
 - Bidirectional learning modes
-- Real-time progress tracking
+- Real-time progress tracking with XP rewards
 - Detailed results with wrong answer review
 
 ### Lesson Management
@@ -181,10 +203,16 @@ For questions or issues:
 
 ## Roadmap
 
+- [x] Spaced repetition algorithm
+- [x] Audio pronunciation
+- [x] Progress tracking with XP system
+- [x] Interactive games
+- [x] Context sentence generation
+- [x] Image attachments
 - [ ] User authentication and cloud sync
-- [ ] Spaced repetition algorithm
-- [ ] Audio pronunciation
 - [ ] Mobile app (React Native)
 - [ ] Advanced analytics
 - [ ] Community lesson sharing
 - [ ] Offline mode support
+- [ ] More game types (memory, speed, etc.)
+- [ ] Social features and leaderboards

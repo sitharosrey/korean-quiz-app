@@ -8,14 +8,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AppSettings } from '@/types';
 import { StorageService } from '@/lib/storage';
 import { toast } from 'sonner';
-import { Save, Key, Globe, Brain, Settings as SettingsIcon } from 'lucide-react';
+import { Save, Key, Globe, Brain, Settings as SettingsIcon, Volume2, Sparkles, Image, Zap } from 'lucide-react';
+import { AudioSettings } from '@/components/ui/audio-settings';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 
 export default function SettingsPage() {
+  return (
+    <AuthGuard>
+      <SettingsPageContent />
+    </AuthGuard>
+  );
+}
+
+function SettingsPageContent() {
   const [settings, setSettings] = useState<AppSettings>({
     groqApiKey: '',
     defaultLanguage: 'korean',
     quizMode: 'english-to-korean',
     questionsPerQuiz: 10,
+    enableSpacedRepetition: true,
+    enablePronunciation: true,
+    enableContextSentences: true,
+    enableImages: true,
+    autoFetchImages: false,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,7 +79,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 lg:px-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -195,6 +210,93 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Audio Settings */}
+          {settings.enablePronunciation && (
+            <AudioSettings />
+          )}
+
+          {/* Enhanced Features */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-500" />
+                Enhanced Learning Features
+              </CardTitle>
+              <CardDescription>
+                Enable or disable advanced learning features
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Spaced Repetition</label>
+                    <p className="text-xs text-gray-500">Smart review system that adapts to your learning pace</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.enableSpacedRepetition}
+                    onChange={(e) => setSettings(prev => ({ ...prev, enableSpacedRepetition: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Pronunciation Practice</label>
+                    <p className="text-xs text-gray-500">Hear correct Korean pronunciation using speech synthesis</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.enablePronunciation}
+                    onChange={(e) => setSettings(prev => ({ ...prev, enablePronunciation: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Context Sentences</label>
+                    <p className="text-xs text-gray-500">Generate example sentences using AI (requires Groq API)</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.enableContextSentences}
+                    onChange={(e) => setSettings(prev => ({ ...prev, enableContextSentences: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Image Attachments</label>
+                    <p className="text-xs text-gray-500">Add visual memory aids to words</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.enableImages}
+                    onChange={(e) => setSettings(prev => ({ ...prev, enableImages: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Auto-fetch Images</label>
+                    <p className="text-xs text-gray-500">Automatically fetch relevant images for new words</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.autoFetchImages}
+                    onChange={(e) => setSettings(prev => ({ ...prev, autoFetchImages: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    disabled={!settings.enableImages}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Save Button */}
           <div className="flex justify-end">
             <Button onClick={saveSettings} size="lg" className="flex items-center gap-2">
@@ -206,17 +308,17 @@ export default function SettingsPage() {
           {/* Info Card */}
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-6">
-              <h3 className="font-semibold text-blue-900 mb-2">About Groq API</h3>
+              <h3 className="font-semibold text-blue-900 mb-2">About Enhanced Features</h3>
               <p className="text-blue-700 text-sm mb-3">
-                The Groq API is used for OCR (Optical Character Recognition) to extract Korean text from images 
-                and for automatic translation. This feature allows you to upload images containing Korean text 
-                and automatically create flashcards.
+                The Korean Flashcard Trainer now includes advanced learning features to enhance your vocabulary acquisition:
               </p>
               <ul className="text-blue-700 text-sm space-y-1">
-                <li>• Free tier available with generous limits</li>
-                <li>• Fast and accurate Korean text recognition</li>
-                <li>• Automatic translation to English</li>
-                <li>• Secure - API key stored locally in your browser</li>
+                <li>• <strong>Spaced Repetition:</strong> Smart review system based on memory science</li>
+                <li>• <strong>Pronunciation:</strong> Browser-based speech synthesis for Korean words</li>
+                <li>• <strong>Context Sentences:</strong> AI-generated examples using Groq API</li>
+                <li>• <strong>Progress Tracking:</strong> XP system, streaks, and detailed statistics</li>
+                <li>• <strong>Interactive Games:</strong> Match the Pairs memory game</li>
+                <li>• <strong>Visual Memory:</strong> Image attachments for better retention</li>
               </ul>
             </CardContent>
           </Card>
