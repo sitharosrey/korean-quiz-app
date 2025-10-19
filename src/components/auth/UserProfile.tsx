@@ -12,8 +12,6 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { 
   User, 
-  Mail, 
-  Calendar, 
   Settings, 
   LogOut, 
   Trash2, 
@@ -194,7 +192,7 @@ export function UserProfile() {
                   <label className="text-sm font-medium text-gray-700">Theme</label>
                   <Select
                     value={editData.theme}
-                    onValueChange={(value) => setEditData(prev => ({ ...prev, theme: value as any }))}
+                    onValueChange={(value) => setEditData(prev => ({ ...prev, theme: value as 'light' | 'dark' | 'system' }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -211,7 +209,7 @@ export function UserProfile() {
                   <label className="text-sm font-medium text-gray-700">Language</label>
                   <Select
                     value={editData.language}
-                    onValueChange={(value) => setEditData(prev => ({ ...prev, language: value as any }))}
+                    onValueChange={(value) => setEditData(prev => ({ ...prev, language: value as 'en' | 'ko' }))}
                   >
                     <SelectTrigger>
                       <SelectValue />

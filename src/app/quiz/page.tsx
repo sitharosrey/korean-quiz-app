@@ -11,8 +11,14 @@ import { QuizResults } from '@/components/quiz/QuizResults';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
 import { 
   Play, 
   Settings, 
@@ -22,7 +28,9 @@ import {
   Target, 
   Trophy, 
   Clock, 
-  Zap 
+  Zap,
+  ArrowLeft,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -31,7 +39,6 @@ import { PageContainer } from '@/components/layout/PageContainer';
 
 function QuizPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState<string>('');
   const [quizMode, setQuizMode] = useState<QuizMode>('multiple-choice');
@@ -39,6 +46,7 @@ function QuizPageContent() {
   const [questionCount, setQuestionCount] = useState(10);
   const [quizSession, setQuizSession] = useState<QuizSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showExitDialog, setShowExitDialog] = useState(false);
 
   useEffect(() => {
     loadLessons();
@@ -165,6 +173,21 @@ function QuizPageContent() {
     startQuiz();
   };
 
+  const handleExitQuiz = () => {
+    if (!quizSession) return;
+    setShowExitDialog(true);
+  };
+
+  const confirmExitQuiz = () => {
+    setQuizSession(null);
+    setShowExitDialog(false);
+    toast.info('Quiz exited. Your progress has been lost.');
+  };
+
+  const cancelExitQuiz = () => {
+    setShowExitDialog(false);
+  };
+
   const selectedLesson = lessons.find(l => l.id === selectedLessonId);
 
   if (isLoading) {
@@ -221,7 +244,20 @@ function QuizPageContent() {
     }
     
     return (
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer className="relative">
+        {/* Exit Quiz Button */}
+        <div className="absolute top-4 right-4 z-10">
+          <Button
+            onClick={handleExitQuiz}
+            variant="outline"
+            size="sm"
+            className="bg-white/90 backdrop-blur-sm border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 shadow-lg"
+          >
+            <X className="w-4 h-4 mr-1" />
+            Exit Quiz
+          </Button>
+        </div>
+        
         <EnhancedQuizCard
           key={currentQuestion.id} // Force re-render for each new question
           question={currentQuestion}
@@ -230,8 +266,9 @@ function QuizPageContent() {
           onAnswer={handleAnswer}
           onNext={handleNext}
           lastResult={quizSession.results.find(r => r.questionId === currentQuestion.id)}
+          onExit={handleExitQuiz}
         />
-      </div>
+      </PageContainer>
     );
   }
 
@@ -514,6 +551,47 @@ function QuizPageContent() {
           </motion.div>
         </div>
       </div>
+
+      {/* Exit Quiz Confirmation Dialog */}
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <X className="w-5 h-5 text-red-500" />
+                Exit Quiz
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelExitQuiz}
+                className="h-6 w-6 p-0 hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <DialogDescription>
+              Are you sure you want to exit the quiz? Your progress will be lost and you'll need to start over.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={cancelExitQuiz}
+              className="flex-1"
+            >
+              Continue Quiz
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmExitQuiz}
+              className="flex-1"
+            >
+              Exit Quiz
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser } from '@/contexts/UserContext';
-import { Sidebar } from './Sidebar';
+import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 
 interface ConditionalLayoutProps {
@@ -12,16 +12,14 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const { isAuthenticated } = useUser();
 
   if (isAuthenticated) {
-    // Show sidebar and adjust layout for authenticated users
+    // Show navbar and adjust layout for authenticated users
     return (
       <>
-        <Sidebar />
-        <div className="lg:ml-64">
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
-        </div>
+        <Navbar />
+        <main className="min-h-screen">
+          {children}
+        </main>
+        <Footer />
       </>
     );
   }

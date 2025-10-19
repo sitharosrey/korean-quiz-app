@@ -26,7 +26,7 @@ export class AuthService {
       if (!stored) return [];
       
       const users = JSON.parse(stored);
-      return users.map((user: any) => ({
+      return users.map((user: Record<string, unknown>) => ({
         ...user,
         createdAt: new Date(user.createdAt),
         lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : undefined,

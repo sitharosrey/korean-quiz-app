@@ -44,7 +44,7 @@ export function debugUsers() {
     
     if (users.length > 0) {
       console.log('📋 User details:');
-      users.forEach((user: any, index: number) => {
+      users.forEach((user: { username: string; email: string; isActive: boolean }, index: number) => {
         console.log(`  ${index + 1}. Username: ${user.username}, Email: ${user.email}, Active: ${user.isActive}`);
       });
     }
@@ -55,6 +55,6 @@ export function debugUsers() {
 
 // Make it available globally for easy access
 if (typeof window !== 'undefined') {
-  (window as any).clearAllUsers = clearAllUsers;
-  (window as any).debugUsers = debugUsers;
+  (window as unknown as { clearAllUsers: typeof clearAllUsers; debugUsers: typeof debugUsers }).clearAllUsers = clearAllUsers;
+  (window as unknown as { clearAllUsers: typeof clearAllUsers; debugUsers: typeof debugUsers }).debugUsers = debugUsers;
 }

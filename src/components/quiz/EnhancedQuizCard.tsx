@@ -14,7 +14,8 @@ import {
   Clock, 
   Lightbulb,
   Play,
-  RotateCcw
+  RotateCcw,
+  X
 } from 'lucide-react';
 import { QuizQuestion, TypingQuestion, DictationQuestion, MultipleChoiceQuestion } from '@/types';
 import { audioService } from '@/lib/audio';
@@ -33,6 +34,7 @@ interface EnhancedQuizCardProps {
     isCorrect: boolean;
     confidence: number;
   };
+  onExit?: () => void;
 }
 
 export function EnhancedQuizCard({ 
@@ -42,7 +44,8 @@ export function EnhancedQuizCard({
   onAnswer, 
   onNext, 
   isLastQuestion = false,
-  lastResult
+  lastResult,
+  onExit
 }: EnhancedQuizCardProps) {
   const [userAnswer, setUserAnswer] = useState('');
   const [isAnswered, setIsAnswered] = useState(false);
@@ -64,6 +67,7 @@ export function EnhancedQuizCard({
   
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout>();
+  const isSubmittingRef = useRef(false);
 
   // Timer effect
   useEffect(() => {
@@ -97,6 +101,7 @@ export function EnhancedQuizCard({
     setLocalConfidence(1.0);
     setStoredAnswer('');
     setStoredTimeSpent(0);
+    isSubmittingRef.current = false; // Reset the ref
     
     if ((question.type === 'typing' || question.type === 'dictation') && inputRef.current) {
       inputRef.current.focus();
@@ -109,7 +114,7 @@ export function EnhancedQuizCard({
   }, [question.id]);
 
   const handleSubmit = () => {
-    if (!userAnswer.trim()) return;
+    if (!userAnswer.trim() || isAnswered || hasSubmittedAnswer) return;
 
     const finalTimeSpent = Date.now() - startTime;
     
@@ -121,10 +126,11 @@ export function EnhancedQuizCard({
       case 'typing':
       case 'dictation':
         // Use appropriate matching method based on answer type
-        const isKoreanAnswer = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/.test(question.answer);
+        const answer = question.answer || '';
+        const isKoreanAnswer = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/.test(answer);
         const matchResult = isKoreanAnswer 
-          ? FuzzyMatchService.matchKorean(userAnswer, question.answer)
-          : FuzzyMatchService.matchEnglish(userAnswer, question.answer);
+          ? FuzzyMatchService.matchKorean(userAnswer, answer)
+          : FuzzyMatchService.matchEnglish(userAnswer, answer);
         localCorrect = matchResult.isMatch;
         localConfidence = matchResult.confidence;
         break;
@@ -136,6 +142,7 @@ export function EnhancedQuizCard({
     console.log('=== DEBUG ===');
     console.log('User Answer:', userAnswer);
     console.log('Question Answer:', question.answer);
+    console.log('Question Correct Answer:', question.correctAnswer);
     console.log('Local Correct:', localCorrect);
     console.log('Question Type:', question.type);
     console.log('==============');
@@ -144,6 +151,7 @@ export function EnhancedQuizCard({
     setIsAnswered(true);
     setLocalCorrect(localCorrect);
     setLocalConfidence(localConfidence);
+    setHasSubmittedAnswer(true);
     
     // Show feedback immediately for incorrect answers
     if (!localCorrect) {
@@ -152,6 +160,48 @@ export function EnhancedQuizCard({
     
     // Store the answer and time spent for when user clicks Next
     setStoredAnswer(userAnswer);
+    setStoredTimeSpent(finalTimeSpent);
+    
+    // Clear timer
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+  };
+
+  const handleMultipleChoiceSubmit = (selectedOption: string) => {
+    // Use ref to prevent double submissions immediately
+    if (isSubmittingRef.current || isAnswered || hasSubmittedAnswer) {
+      console.log('Preventing double submission');
+      return;
+    }
+    
+    isSubmittingRef.current = true;
+    const finalTimeSpent = Date.now() - startTime;
+    
+    // Evaluate the answer directly
+    const localCorrect = selectedOption === question.correctAnswer;
+    const localConfidence = 1.0;
+
+    console.log('=== MULTIPLE CHOICE DEBUG ===');
+    console.log('Selected Option:', selectedOption);
+    console.log('Correct Answer:', question.correctAnswer);
+    console.log('Local Correct:', localCorrect);
+    console.log('==============================');
+
+    // Set all states at once
+    setUserAnswer(selectedOption);
+    setIsAnswered(true);
+    setLocalCorrect(localCorrect);
+    setLocalConfidence(localConfidence);
+    setHasSubmittedAnswer(true);
+    
+    // Show feedback immediately for incorrect answers
+    if (!localCorrect) {
+      setShowFeedback(true);
+    }
+    
+    // Store the answer and time spent for when user clicks Next
+    setStoredAnswer(selectedOption);
     setStoredTimeSpent(finalTimeSpent);
     
     // Clear timer
@@ -240,7 +290,10 @@ export function EnhancedQuizCard({
       return '✅ Correct! Well done!';
     } else {
       // Show partial hint with first few characters
-      const answer = question.answer;
+      const answer = question.answer || question.correctAnswer || '';
+      if (!answer) {
+        return '❌ Incorrect. Try again!';
+      }
       const hintLength = Math.min(2, Math.floor(answer.length / 2));
       const hint = answer.substring(0, hintLength) + '...';
       return `❌ Incorrect. Hint: ${hint}`;
@@ -277,6 +330,16 @@ export function EnhancedQuizCard({
                 <Clock className="w-4 h-4" />
                 {formatTime(timeSpent)}
               </div>
+              {onExit && (
+                <Button
+                  onClick={onExit}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -329,13 +392,15 @@ export function EnhancedQuizCard({
                       isAnswered && option === userAnswer && !isCorrect && "border-red-500 text-red-700",
                       isAnswered && option === question.correctAnswer && "border-green-500 bg-green-50 text-green-700"
                     )}
-                    onClick={() => {
-                      if (!isAnswered) {
-                        setUserAnswer(option);
-                        handleSubmit();
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!isAnswered && !hasSubmittedAnswer && !isSubmittingRef.current) {
+                        // Directly handle the submission without relying on state updates
+                        handleMultipleChoiceSubmit(option);
                       }
                     }}
-                    disabled={isAnswered}
+                    disabled={isAnswered || hasSubmittedAnswer || isSubmittingRef.current}
                   >
                     <span className="font-medium">{option}</span>
                   </Button>

@@ -26,7 +26,7 @@ export function WelcomeMessage({ onDismiss }: WelcomeMessageProps) {
           </div>
           <CardTitle className="text-2xl">Welcome to Korean Flashcard Trainer!</CardTitle>
           <CardDescription className="text-lg">
-            You're all set to start your Korean learning journey
+            You&apos;re all set to start your Korean learning journey
           </CardDescription>
         </CardHeader>
         
@@ -54,7 +54,7 @@ export function WelcomeMessage({ onDismiss }: WelcomeMessageProps) {
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
-              What's Available:
+              What&apos;s Available:
             </h4>
             <ul className="text-sm text-gray-700 space-y-1">
               <li>• Spaced repetition system for optimal learning</li>

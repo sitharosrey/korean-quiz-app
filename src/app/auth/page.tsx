@@ -26,8 +26,8 @@ export default function AuthPage() {
               <div className="mt-2 space-x-2">
                 <button 
                   onClick={() => {
-                    if (typeof window !== 'undefined' && (window as any).debugUsers) {
-                      (window as any).debugUsers();
+                    if (typeof window !== 'undefined' && (window as unknown as { debugUsers?: () => void }).debugUsers) {
+                      (window as unknown as { debugUsers: () => void }).debugUsers();
                     }
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800 underline"
@@ -36,8 +36,8 @@ export default function AuthPage() {
                 </button>
                 <button 
                   onClick={() => {
-                    if (typeof window !== 'undefined' && (window as any).clearAllUsers) {
-                      (window as any).clearAllUsers();
+                    if (typeof window !== 'undefined' && (window as unknown as { clearAllUsers?: () => void }).clearAllUsers) {
+                      (window as unknown as { clearAllUsers: () => void }).clearAllUsers();
                     }
                   }}
                   className="text-xs text-red-600 hover:text-red-800 underline"

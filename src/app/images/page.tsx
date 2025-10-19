@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lesson, WordPair } from '@/types';
+import { Lesson } from '@/types';
 import { StorageService } from '@/lib/storage';
 import { VisualMemory } from '@/components/practice/VisualMemory';
 import { Button } from '@/components/ui/button';
@@ -195,7 +195,7 @@ function ImagesPageContent() {
                         <p className="text-xs text-cyan-600 mb-2">Current Image:</p>
                         <img 
                           src={selectedWord.imageUrl} 
-                          alt={selectedWord.korean}
+                          alt={`Image for ${selectedWord.korean}`}
                           className="w-20 h-20 object-cover rounded border"
                         />
                       </div>
@@ -312,7 +312,7 @@ function ImagesPageContent() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p>• Choose images that clearly represent the word's meaning</p>
+                  <p>• Choose images that clearly represent the word&apos;s meaning</p>
                   <p>• Use high-quality images for better visual impact</p>
                   <p>• Try different images to find what works best for you</p>
                   <p>• Visual associations help with long-term memory</p>
