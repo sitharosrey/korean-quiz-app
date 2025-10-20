@@ -8,18 +8,9 @@ import { LessonForm } from '@/components/lesson/LessonForm';
 import { LessonCard } from '@/components/lesson/LessonCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { BookOpen } from 'lucide-react';
-import { AuthGuard } from '@/components/auth/AuthGuard';
 import { PageContainer } from '@/components/layout/PageContainer';
 
 export default function LessonsPage() {
-  return (
-    <AuthGuard>
-      <LessonsPageContent />
-    </AuthGuard>
-  );
-}
-
-function LessonsPageContent() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

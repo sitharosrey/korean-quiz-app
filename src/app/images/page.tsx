@@ -22,7 +22,6 @@ import {
   Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { AuthGuard } from '@/components/auth/AuthGuard';
 import { motion } from 'framer-motion';
 
 function ImagesPageContent() {
@@ -348,9 +347,5 @@ function ImagesPageContent() {
 }
 
 export default function ImagesPage() {
-  return (
-    <AuthGuard>
-      <ImagesPageContent />
-    </AuthGuard>
-  );
+  return <ImagesPageContent />;
 }

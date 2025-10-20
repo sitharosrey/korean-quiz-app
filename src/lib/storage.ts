@@ -1,5 +1,4 @@
 import { Lesson, AppSettings, UserProgress, MatchGameSession, WordPair, SPACED_REPETITION_INTERVALS } from '@/types';
-import { AuthService } from './auth';
 
 const STORAGE_KEYS = {
   LESSONS: 'korean-flashcard-lessons',
@@ -7,12 +6,6 @@ const STORAGE_KEYS = {
   PROGRESS: 'korean-flashcard-progress',
   MATCH_GAMES: 'korean-flashcard-match-games',
 } as const;
-
-// Helper function to get current user ID
-const getCurrentUserId = (): string | null => {
-  const currentUser = AuthService.getCurrentUser();
-  return currentUser?.id || null;
-};
 
 export class StorageService {
   // Lessons
@@ -24,16 +17,9 @@ export class StorageService {
       if (!stored) return [];
       
       const lessons = JSON.parse(stored);
-      const currentUserId = getCurrentUserId();
       
-      // Filter lessons by current user, or return all if no user is logged in (for backward compatibility)
-      const filteredLessons = currentUserId 
-        ? lessons.filter((lesson: Lesson) => lesson.userId === currentUserId)
-        : lessons.filter((lesson: Lesson) => !lesson.userId); // Legacy lessons without userId
-      
-      return filteredLessons.map((lesson: Lesson) => ({
+      return lessons.map((lesson: Lesson) => ({
         ...lesson,
-        userId: lesson.userId || currentUserId || 'anonymous', // Ensure userId is set
         createdAt: new Date(lesson.createdAt),
         updatedAt: new Date(lesson.updatedAt),
         words: lesson.words.map((word: WordPair) => ({
@@ -58,67 +44,25 @@ export class StorageService {
     }
   }
 
-  // Helper methods for working with all lessons (not filtered by user)
-  private static getAllLessons(): Lesson[] {
-    if (typeof window === 'undefined') return [];
-    
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.LESSONS);
-      if (!stored) return [];
-      
-      const lessons = JSON.parse(stored);
-      return lessons.map((lesson: Lesson) => ({
-        ...lesson,
-        createdAt: new Date(lesson.createdAt),
-        updatedAt: new Date(lesson.updatedAt),
-        words: lesson.words.map((word: WordPair) => ({
-          ...word,
-          nextReviewDate: new Date(word.nextReviewDate),
-          lastReviewed: word.lastReviewed ? new Date(word.lastReviewed) : undefined,
-        })),
-      }));
-    } catch (error) {
-      console.error('Error loading all lessons:', error);
-      return [];
-    }
-  }
-
-  private static saveAllLessons(lessons: Lesson[]): void {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      localStorage.setItem(STORAGE_KEYS.LESSONS, JSON.stringify(lessons));
-    } catch (error) {
-      console.error('Error saving all lessons:', error);
-    }
-  }
-
   static addLesson(lesson: Lesson): void {
-    const currentUserId = getCurrentUserId();
-    const lessonWithUserId = {
-      ...lesson,
-      userId: lesson.userId || currentUserId || 'anonymous',
-    };
-    
-    // Get all lessons (not filtered by user)
-    const allLessons = this.getAllLessons();
-    allLessons.push(lessonWithUserId);
-    this.saveAllLessons(allLessons);
+    const lessons = this.getLessons();
+    lessons.push(lesson);
+    this.saveLessons(lessons);
   }
 
   static updateLesson(updatedLesson: Lesson): void {
-    const allLessons = this.getAllLessons();
-    const index = allLessons.findIndex(l => l.id === updatedLesson.id);
+    const lessons = this.getLessons();
+    const index = lessons.findIndex(l => l.id === updatedLesson.id);
     if (index !== -1) {
-      allLessons[index] = { ...updatedLesson, updatedAt: new Date() };
-      this.saveAllLessons(allLessons);
+      lessons[index] = { ...updatedLesson, updatedAt: new Date() };
+      this.saveLessons(lessons);
     }
   }
 
   static deleteLesson(lessonId: string): void {
-    const allLessons = this.getAllLessons();
-    const filtered = allLessons.filter(l => l.id !== lessonId);
-    this.saveAllLessons(filtered);
+    const lessons = this.getLessons();
+    const filtered = lessons.filter(l => l.id !== lessonId);
+    this.saveLessons(filtered);
   }
 
   // Settings
@@ -185,9 +129,7 @@ export class StorageService {
 
   // Progress tracking
   static getProgress(): UserProgress {
-    const currentUserId = getCurrentUserId();
     const defaultProgress: UserProgress = {
-      userId: currentUserId || 'anonymous',
       totalXP: 0,
       currentLevel: 1,
       currentStreak: 0,
@@ -208,17 +150,12 @@ export class StorageService {
       const stored = localStorage.getItem(STORAGE_KEYS.PROGRESS);
       if (!stored) return defaultProgress;
       
-      const parsed = JSON.parse(stored);
-      // Handle both old format (single object) and new format (array)
-      const allProgress = Array.isArray(parsed) ? parsed : [parsed];
-      const userProgress = allProgress.find((p: UserProgress) => p.userId === currentUserId);
-      
-      if (!userProgress) return defaultProgress;
+      const progress = JSON.parse(stored);
       
       return {
         ...defaultProgress,
-        ...userProgress,
-        lastStudyDate: userProgress.lastStudyDate ? new Date(userProgress.lastStudyDate) : undefined,
+        ...progress,
+        lastStudyDate: progress.lastStudyDate ? new Date(progress.lastStudyDate) : undefined,
       };
     } catch (error) {
       console.error('Error loading progress:', error);
@@ -230,31 +167,7 @@ export class StorageService {
     if (typeof window === 'undefined') return;
     
     try {
-      const currentUserId = getCurrentUserId();
-      const progressWithUserId = {
-        ...progress,
-        userId: progress.userId || currentUserId || 'anonymous',
-      };
-      
-      // Get all progress data
-      const stored = localStorage.getItem(STORAGE_KEYS.PROGRESS);
-      let allProgress: UserProgress[] = [];
-      
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Handle both old format (single object) and new format (array)
-        allProgress = Array.isArray(parsed) ? parsed : [parsed];
-      }
-      
-      // Update or add user progress
-      const existingIndex = allProgress.findIndex(p => p.userId === progressWithUserId.userId);
-      if (existingIndex !== -1) {
-        allProgress[existingIndex] = progressWithUserId;
-      } else {
-        allProgress.push(progressWithUserId);
-      }
-      
-      localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(allProgress));
+      localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(progress));
     } catch (error) {
       console.error('Error saving progress:', error);
     }

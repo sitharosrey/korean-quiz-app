@@ -2,19 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Volume2, 
   VolumeX, 
   CheckCircle, 
   XCircle, 
   Clock, 
-  Lightbulb,
   Play,
-  RotateCcw,
   X
 } from 'lucide-react';
 import { TypingQuestion, DictationQuestion, MultipleChoiceQuestion } from '@/types';
@@ -78,7 +74,6 @@ export function EnhancedQuizCard({
   
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const isSubmittingRef = useRef(false);
 
   // Timer effect
   useEffect(() => {
@@ -112,7 +107,6 @@ export function EnhancedQuizCard({
     setLocalConfidence(1.0);
     setStoredAnswer('');
     setStoredTimeSpent(0);
-    isSubmittingRef.current = false; // Reset the ref
     
     if (inputRef.current) {
       inputRef.current.focus();
@@ -180,13 +174,12 @@ export function EnhancedQuizCard({
   };
 
   const handleMultipleChoiceSubmit = (selectedOption: string) => {
-    // Use ref to prevent double submissions immediately
-    if (isSubmittingRef.current || isAnswered || hasSubmittedAnswer) {
+    // Prevent double submissions
+    if (isAnswered || hasSubmittedAnswer) {
       console.log('Preventing double submission');
       return;
     }
     
-    isSubmittingRef.current = true;
     const finalTimeSpent = Date.now() - startTime;
     
     // Evaluate the answer directly
@@ -342,14 +335,18 @@ export function EnhancedQuizCard({
                 {formatTime(timeSpent)}
               </div>
               {onExit && (
-                <Button
-                  onClick={onExit}
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Exit button clicked!');
+                    onExit();
+                  }}
+                  className="inline-flex items-center justify-center h-8 rounded-md px-3 text-sm font-medium transition-all hover:bg-red-50 text-gray-500 hover:text-red-600"
                 >
                   <X className="w-4 h-4" />
-                </Button>
+                </button>
               )}
             </div>
           </div>
@@ -360,19 +357,18 @@ export function EnhancedQuizCard({
           <div className="text-center space-y-4">
             {getQuestionType(question) === 'dictation' && (
               <div className="flex items-center justify-center gap-4">
-                <Button
+                <button
+                  type="button"
                   onClick={handlePlayAudio}
                   disabled={isPlaying}
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full"
+                  className="inline-flex items-center justify-center h-10 rounded-full px-6 text-sm font-medium transition-all border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {isPlaying ? (
                     <VolumeX className="w-5 h-5" />
                   ) : (
                     <Play className="w-5 h-5" />
                   )}
-                </Button>
+                </button>
                 <span className="text-sm text-gray-500">
                   {isPlaying ? 'Playing...' : 'Click to hear the word'}
                 </span>
@@ -394,28 +390,34 @@ export function EnhancedQuizCard({
           <div className="space-y-4">
             {getQuestionType(question) === 'multiple-choice' ? (
               <div className="grid gap-2">
-                {('options' in question ? question.options : []).map((option, index) => (
-                  <Button
-                    key={index}
-                    variant={isAnswered && option === ('correctAnswer' in question ? question.correctAnswer : '') ? "default" : "outline"}
-                    className={cn(
-                      "justify-start h-auto p-4 text-left",
-                      isAnswered && option === userAnswer && !isCorrect && "border-red-500 text-red-700",
-                      isAnswered && option === ('correctAnswer' in question ? question.correctAnswer : '') && "border-green-500 bg-green-50 text-green-700"
-                    )}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (!isAnswered && !hasSubmittedAnswer && !isSubmittingRef.current) {
-                        // Directly handle the submission without relying on state updates
-                        handleMultipleChoiceSubmit(option);
-                      }
-                    }}
-                    disabled={isAnswered || hasSubmittedAnswer || isSubmittingRef.current}
-                  >
-                    <span className="font-medium">{option}</span>
-                  </Button>
-                ))}
+                {(() => {
+                  const options = 'options' in question ? question.options : [];
+                  console.log('Rendering options:', options);
+                  console.log('isAnswered:', isAnswered);
+                  console.log('hasSubmittedAnswer:', hasSubmittedAnswer);
+                  return options.map((option, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className={cn(
+                        "inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-auto p-4 text-left w-full",
+                        isAnswered && option === userAnswer && !isCorrect && "border-red-500 text-red-700 bg-red-50",
+                        isAnswered && option === ('correctAnswer' in question ? question.correctAnswer : '') && "border-green-500 bg-green-50 text-green-700"
+                      )}
+                      onClick={() => {
+                        console.log('Button clicked!', option);
+                        console.log('Can submit?', !isAnswered && !hasSubmittedAnswer);
+                        if (!isAnswered && !hasSubmittedAnswer) {
+                          console.log('Calling handleMultipleChoiceSubmit');
+                          handleMultipleChoiceSubmit(option);
+                        }
+                      }}
+                      disabled={isAnswered || hasSubmittedAnswer}
+                    >
+                      <span className="font-medium">{option}</span>
+                    </button>
+                  ));
+                })()}
               </div>
             ) : (
               <div className="space-y-2">
@@ -434,13 +436,14 @@ export function EnhancedQuizCard({
                 />
                 
                 {!isAnswered && (
-                  <Button
+                  <button
+                    type="button"
                     onClick={handleSubmit}
                     disabled={!userAnswer.trim()}
-                    className="w-full"
+                    className="inline-flex items-center justify-center w-full h-9 px-4 py-2 rounded-md text-sm font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
                   >
                     Submit Answer
-                  </Button>
+                  </button>
                 )}
               </div>
             )}
@@ -469,13 +472,13 @@ export function EnhancedQuizCard({
                 {/* Try Again button for incorrect answers */}
                 {(getQuestionType(question) === 'typing' || getQuestionType(question) === 'dictation') && !hasTriedAgain && (
                   <div className="mt-4">
-                    <Button
+                    <button
+                      type="button"
                       onClick={handleTryAgain}
-                      variant="outline"
-                      className="w-full border-red-300 text-red-700 hover:bg-red-50"
+                      className="inline-flex items-center justify-center w-full h-9 px-4 py-2 rounded-md text-sm font-medium transition-all border bg-background shadow-xs hover:bg-red-50 border-red-300 text-red-700"
                     >
                       Try Again
-                    </Button>
+                    </button>
                   </div>
                 )}
               </motion.div>
@@ -494,13 +497,13 @@ export function EnhancedQuizCard({
                 animate={{ opacity: 1, y: 0 }}
                 className="pt-4"
               >
-                <Button
+                <button
+                  type="button"
                   onClick={handleNext}
                   className={cn(
-                    "w-full text-lg py-4 font-semibold",
+                    "inline-flex items-center justify-center w-full text-lg py-4 px-6 rounded-md font-semibold transition-all text-white",
                     localCorrect ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
                   )}
-                  size="lg"
                 >
                   {localCorrect ? (
                     <>
@@ -513,7 +516,7 @@ export function EnhancedQuizCard({
                       {isLastQuestion ? 'Finish Quiz' : 'Next Question'}
                     </>
                   )}
-                </Button>
+                </button>
               </motion.div>
             )
           )}

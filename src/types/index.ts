@@ -18,7 +18,6 @@ export interface WordPair {
 
 export interface Lesson {
   id: string;
-  userId: string; // Link to user account
   name: string;
   words: WordPair[];
   createdAt: Date;
@@ -71,41 +70,8 @@ export interface AppSettings {
   audioVolume: number;
 }
 
-// User Account System
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  displayName: string;
-  password: string; // Store password for demo purposes
-  avatar?: string;
-  createdAt: Date;
-  lastLoginAt?: Date;
-  preferences: UserPreferences;
-  isActive: boolean;
-}
-
-export interface UserPreferences {
-  theme: 'light' | 'dark' | 'system';
-  language: 'en' | 'ko';
-  timezone: string;
-  notifications: {
-    email: boolean;
-    browser: boolean;
-    studyReminders: boolean;
-  };
-}
-
-export interface UserSession {
-  userId: string;
-  token: string;
-  expiresAt: Date;
-  isActive: boolean;
-}
-
 // Progress tracking
 export interface UserProgress {
-  userId: string; // Link to user account
   totalXP: number;
   currentLevel: number;
   currentStreak: number;

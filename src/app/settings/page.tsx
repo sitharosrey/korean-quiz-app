@@ -10,17 +10,8 @@ import { StorageService } from '@/lib/storage';
 import { toast } from 'sonner';
 import { Save, Key, Globe, Brain, Settings as SettingsIcon, Volume2, Sparkles, Image, Zap } from 'lucide-react';
 import { AudioSettings } from '@/components/ui/audio-settings';
-import { AuthGuard } from '@/components/auth/AuthGuard';
 
 export default function SettingsPage() {
-  return (
-    <AuthGuard>
-      <SettingsPageContent />
-    </AuthGuard>
-  );
-}
-
-function SettingsPageContent() {
   const [settings, setSettings] = useState<AppSettings>({
     groqApiKey: '',
     defaultLanguage: 'korean',

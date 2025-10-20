@@ -35,7 +35,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { AuthGuard } from '@/components/auth/AuthGuard';
 import { PageContainer } from '@/components/layout/PageContainer';
 
 function QuizPageContent() {
@@ -252,20 +251,7 @@ function QuizPageContent() {
     }
     
     return (
-      <PageContainer className="relative">
-        {/* Exit Quiz Button */}
-        <div className="absolute top-4 right-4 z-10">
-          <Button
-            onClick={handleExitQuiz}
-            variant="outline"
-            size="sm"
-            className="bg-white/90 backdrop-blur-sm border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 shadow-lg"
-          >
-            <X className="w-4 h-4 mr-1" />
-            Exit Quiz
-          </Button>
-        </div>
-        
+      <PageContainer>
         <EnhancedQuizCard
           key={currentQuestion.id} // Force re-render for each new question
           question={currentQuestion}
@@ -279,6 +265,37 @@ function QuizPageContent() {
           } : undefined}
           onExit={handleExitQuiz}
         />
+
+        {/* Exit Quiz Confirmation Dialog */}
+        <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <X className="w-5 h-5 text-red-500" />
+                Exit Quiz
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to exit the quiz? Your progress will be lost and you'll need to start over.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={cancelExitQuiz}
+                className="flex-1"
+              >
+                Continue Quiz
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmExitQuiz}
+                className="flex-1"
+              >
+                Exit Quiz
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PageContainer>
     );
   }
@@ -562,57 +579,14 @@ function QuizPageContent() {
           </motion.div>
         </div>
       </div>
-
-      {/* Exit Quiz Confirmation Dialog */}
-      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
-        <DialogContent className="sm:max-w-md" showCloseButton={false}>
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2">
-                <X className="w-5 h-5 text-red-500" />
-                Exit Quiz
-              </DialogTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={cancelExitQuiz}
-                className="h-6 w-6 p-0 hover:bg-gray-100"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <DialogDescription>
-              Are you sure you want to exit the quiz? Your progress will be lost and you'll need to start over.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={cancelExitQuiz}
-              className="flex-1"
-            >
-              Continue Quiz
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmExitQuiz}
-              className="flex-1"
-            >
-              Exit Quiz
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </PageContainer>
   );
 }
 
 export default function QuizPage() {
   return (
-    <AuthGuard>
-      <Suspense fallback={<div>Loading...</div>}>
-        <QuizPageContent />
-      </Suspense>
-    </AuthGuard>
+    <Suspense fallback={<div>Loading...</div>}>
+      <QuizPageContent />
+    </Suspense>
   );
 }

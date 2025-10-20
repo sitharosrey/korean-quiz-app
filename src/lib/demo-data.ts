@@ -20,7 +20,6 @@ function createDemoWordPair(id: string, korean: string, english: string): WordPa
 export const demoLessons: Lesson[] = [
   {
     id: 'demo-lesson-1',
-    userId: 'demo', // Assign to demo user
     name: 'Basic Greetings',
     words: [
       createDemoWordPair('word-1', '안녕하세요', 'Hello'),
@@ -39,7 +38,6 @@ export const demoLessons: Lesson[] = [
   },
   {
     id: 'demo-lesson-2',
-    userId: 'demo', // Assign to demo user
     name: 'Food & Drinks',
     words: [
       createDemoWordPair('word-11', '밥', 'Rice'),
@@ -60,7 +58,6 @@ export const demoLessons: Lesson[] = [
   },
   {
     id: 'demo-lesson-3',
-    userId: 'demo', // Assign to demo user
     name: 'Family Members',
     words: [
       createDemoWordPair('word-23', '가족', 'Family'),
@@ -80,7 +77,6 @@ export const demoLessons: Lesson[] = [
   },
   {
     id: 'demo-lesson-4',
-    userId: 'demo', // Assign to demo user
     name: 'Numbers 1-20',
     words: [
       createDemoWordPair('word-34', '하나', 'One'),
@@ -109,7 +105,6 @@ export const demoLessons: Lesson[] = [
   },
   {
     id: 'demo-lesson-5',
-    userId: 'demo', // Assign to demo user
     name: 'Colors',
     words: [
       createDemoWordPair('word-54', '빨간색', 'Red'),

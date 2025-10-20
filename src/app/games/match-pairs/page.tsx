@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, Settings, Gamepad2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { AuthGuard } from '@/components/auth/AuthGuard';
 
 function MatchPairsPageContent() {
   const searchParams = useSearchParams();
@@ -287,10 +286,8 @@ function MatchPairsPageContent() {
 
 export default function MatchPairsPage() {
   return (
-    <AuthGuard>
-      <Suspense fallback={<div>Loading...</div>}>
-        <MatchPairsPageContent />
-      </Suspense>
-    </AuthGuard>
+    <Suspense fallback={<div>Loading...</div>}>
+      <MatchPairsPageContent />
+    </Suspense>
   );
 }

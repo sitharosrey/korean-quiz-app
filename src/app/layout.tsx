@@ -3,9 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ConditionalLayout } from "@/components/layout/ConditionalLayout";
 import { Toaster } from "@/components/ui/sonner";
-import { UserProvider } from "@/contexts/UserContext";
-import "@/lib/demo-users"; // Demo user utilities
-import "@/lib/clear-users"; // Clear users utility
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,12 +29,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}
       >
-        <UserProvider>
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
-          <Toaster />
-        </UserProvider>
+        <ConditionalLayout>
+          {children}
+        </ConditionalLayout>
+        <Toaster />
       </body>
     </html>
   );

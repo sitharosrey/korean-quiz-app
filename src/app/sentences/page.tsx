@@ -18,7 +18,6 @@ import {
   Brain,
   Star
 } from 'lucide-react';
-import { AuthGuard } from '@/components/auth/AuthGuard';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
@@ -284,9 +283,5 @@ function SentencesPageContent() {
 }
 
 export default function SentencesPage() {
-  return (
-    <AuthGuard>
-      <SentencesPageContent />
-    </AuthGuard>
-  );
+  return <SentencesPageContent />;
 }
