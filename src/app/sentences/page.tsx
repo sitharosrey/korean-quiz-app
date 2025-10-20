@@ -157,16 +157,6 @@ function SentencesPageContent() {
                         {selectedWord.english}
                       </Badge>
                     </div>
-                    {selectedWord.pronunciation && (
-                      <p className="text-sm text-purple-600 mb-2">
-                        Pronunciation: {selectedWord.pronunciation}
-                      </p>
-                    )}
-                    {selectedWord.notes && (
-                      <p className="text-sm text-purple-700">
-                        Notes: {selectedWord.notes}
-                      </p>
-                    )}
                   </div>
                 )}
               </CardContent>

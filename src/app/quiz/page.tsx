@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Lesson, QuizMode, QuizDirection, QuizSession } from '@/types';
+import { Lesson, QuizMode, QuizDirection } from '@/types';
+import { QuizSession } from '@/lib/quiz-enhanced';
 import { StorageService } from '@/lib/storage';
 import { EnhancedQuizService } from '@/lib/quiz-enhanced';
 import { EnhancedQuizCard } from '@/components/quiz/EnhancedQuizCard';
@@ -207,7 +208,14 @@ function QuizPageContent() {
   if (quizSession?.isCompleted) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <QuizResults session={quizSession} onRestart={restartQuiz} />
+        <QuizResults 
+          results={quizSession.results}
+          totalQuestions={quizSession.questions.length}
+          totalXP={quizSession.totalXP}
+          averageTime={quizSession.results.reduce((sum, r) => sum + r.timeSpent, 0) / quizSession.results.length}
+          onRestart={restartQuiz}
+          onBack={() => setQuizSession(null)}
+        />
       </div>
     );
   }
@@ -265,7 +273,10 @@ function QuizPageContent() {
           totalQuestions={quizSession.questions.length}
           onAnswer={handleAnswer}
           onNext={handleNext}
-          lastResult={quizSession.results.find(r => r.questionId === currentQuestion.id)}
+          lastResult={quizSession.results.find(r => r.questionId === currentQuestion.id) ? {
+            isCorrect: quizSession.results.find(r => r.questionId === currentQuestion.id)!.isCorrect,
+            confidence: quizSession.results.find(r => r.questionId === currentQuestion.id)!.confidence || 1.0
+          } : undefined}
           onExit={handleExitQuiz}
         />
       </PageContainer>
@@ -504,7 +515,7 @@ function QuizPageContent() {
                   <div className="space-y-3">
                     <div>
                       <h3 className="font-semibold text-gray-900">{selectedLesson.name}</h3>
-                      <p className="text-sm text-gray-600">{selectedLesson.description}</p>
+                      <p className="text-sm text-gray-600">{selectedLesson.words.length} words</p>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Clock className="w-4 h-4" />

@@ -1,9 +1,10 @@
-import { Lesson, QuizQuestion, QuizSession, WordPair } from '@/types';
+import { Lesson, WordPair, TypingQuestion, DictationQuestion, MultipleChoiceQuestion, QuizMode, QuizDirection } from '@/types';
+import { QuizSession } from './quiz-enhanced';
 import { StorageService } from './storage';
 import { ProgressService } from './progress';
 
 export class QuizService {
-  static generateQuizQuestions(lesson: Lesson, questionCount: number = 10): QuizQuestion[] {
+  static generateQuizQuestions(lesson: Lesson, questionCount: number = 10): MultipleChoiceQuestion[] {
     const { words } = lesson;
     
     if (words.length === 0) {
@@ -23,15 +24,15 @@ export class QuizService {
       
       return {
         id: `question-${index + 1}`,
-        english: word.english,
-        correctKorean: word.korean,
-        options: uniqueOptions,
+        type: 'multiple-choice' as const,
+        question: word.english,
         correctAnswer: word.korean,
+        options: uniqueOptions,
       };
     });
   }
 
-  static generateReverseQuizQuestions(lesson: Lesson, questionCount: number = 10): QuizQuestion[] {
+  static generateReverseQuizQuestions(lesson: Lesson, questionCount: number = 10): MultipleChoiceQuestion[] {
     const { words } = lesson;
     
     if (words.length === 0) {
@@ -51,10 +52,10 @@ export class QuizService {
       
       return {
         id: `question-${index + 1}`,
-        english: word.korean, // Korean word as the question
-        correctKorean: word.english, // English as the answer
+        type: 'multiple-choice' as const,
+        question: word.korean, // Korean word as the question
+        correctAnswer: word.english, // English as the answer
         options: uniqueOptions,
-        correctAnswer: word.english,
       };
     });
   }
@@ -84,26 +85,30 @@ export class QuizService {
     return {
       id: `quiz-${Date.now()}`,
       lessonId: lesson.id,
+      mode: 'multiple-choice' as const,
+      direction: reverseMode ? 'korean-to-english' as const : 'english-to-korean' as const,
       questions,
       results: [],
       currentQuestionIndex: 0,
       startTime: new Date(),
       isCompleted: false,
+      totalXP: 0,
     };
   }
 
   static submitAnswer(session: QuizSession, selectedAnswer: string, timeSpent: number): QuizSession {
     const currentQuestion = session.questions[session.currentQuestionIndex];
-    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+    const isCorrect = selectedAnswer === ('correctAnswer' in currentQuestion ? currentQuestion.correctAnswer : '');
     
     // Update spaced repetition data for the word
     this.updateWordProgress(currentQuestion, isCorrect);
     
     const result = {
       questionId: currentQuestion.id,
-      selectedAnswer,
+      userAnswer: selectedAnswer,
       isCorrect,
       timeSpent,
+      xpEarned: isCorrect ? 10 : 0,
     };
 
     const updatedResults = [...session.results, result];
@@ -119,7 +124,7 @@ export class QuizService {
     };
   }
 
-  static updateWordProgress(question: QuizQuestion, isCorrect: boolean): void {
+  static updateWordProgress(question: TypingQuestion | DictationQuestion | MultipleChoiceQuestion, isCorrect: boolean): void {
     // Find the word in the lesson and update its progress
     const lessons = StorageService.getLessons();
     const lesson = lessons.find(l => l.id === question.id.split('-')[0]); // Extract lesson ID from question ID
@@ -127,8 +132,9 @@ export class QuizService {
     if (!lesson) return;
     
     // Find the word that corresponds to this question
+    const correctAnswer = 'correctAnswer' in question ? question.correctAnswer : '';
     const word = lesson.words.find(w => 
-      w.korean === question.correctKorean || w.english === question.correctKorean
+      w.korean === correctAnswer || w.english === correctAnswer
     );
     
     if (!word) return;
@@ -161,7 +167,7 @@ export class QuizService {
     return { correct, total, percentage };
   }
 
-  static getWrongAnswers(session: QuizSession): QuizQuestion[] {
+  static getWrongAnswers(session: QuizSession): (TypingQuestion | DictationQuestion | MultipleChoiceQuestion)[] {
     const wrongQuestionIds = session.results
       .filter(r => !r.isCorrect)
       .map(r => r.questionId);

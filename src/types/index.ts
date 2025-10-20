@@ -25,13 +25,6 @@ export interface Lesson {
   updatedAt: Date;
 }
 
-export interface QuizQuestion {
-  id: string;
-  english: string;
-  correctKorean: string;
-  options: string[];
-  correctAnswer: string;
-}
 
 export interface QuizResult {
   questionId: string;

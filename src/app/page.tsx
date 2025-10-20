@@ -192,28 +192,32 @@ function HomePageContent() {
               title: "Create Account",
               description: "Sign up for a free account or use our demo accounts to get started immediately",
               icon: User,
-              color: "bg-blue-500"
+              color: "bg-blue-500",
+              href: undefined
             },
             {
               step: "2", 
               title: "Create Lessons",
               description: "Add Korean-English word pairs to build your vocabulary collection",
               icon: BookOpen,
-              color: "bg-green-500"
+              color: "bg-green-500",
+              href: undefined
             },
             {
               step: "3",
               title: "Practice & Learn",
               description: "Take quizzes, play games, and use spaced repetition to master Korean words",
               icon: Brain,
-              color: "bg-purple-500"
+              color: "bg-purple-500",
+              href: undefined
             },
             {
               step: "4",
               title: "Track Progress",
               description: "Monitor your learning journey with detailed statistics and achievements",
               icon: BarChart3,
-              color: "bg-orange-500"
+              color: "bg-orange-500",
+              href: undefined
             }
           ]).map((item, index) => (
             <motion.div

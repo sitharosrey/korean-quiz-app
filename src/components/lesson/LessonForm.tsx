@@ -28,6 +28,7 @@ export function LessonForm({ onLessonCreated }: LessonFormProps) {
       id: `lesson-${Date.now()}`,
       name: lessonName.trim(),
       words: [],
+      userId: 'demo-user',
       createdAt: new Date(),
       updatedAt: new Date(),
     };

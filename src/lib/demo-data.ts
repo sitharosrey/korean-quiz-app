@@ -80,6 +80,7 @@ export const demoLessons: Lesson[] = [
   },
   {
     id: 'demo-lesson-4',
+    userId: 'demo', // Assign to demo user
     name: 'Numbers 1-20',
     words: [
       createDemoWordPair('word-34', '하나', 'One'),
@@ -108,6 +109,7 @@ export const demoLessons: Lesson[] = [
   },
   {
     id: 'demo-lesson-5',
+    userId: 'demo', // Assign to demo user
     name: 'Colors',
     words: [
       createDemoWordPair('word-54', '빨간색', 'Red'),

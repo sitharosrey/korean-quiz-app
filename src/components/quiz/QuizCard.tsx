@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { PronunciationButton } from '@/components/ui/pronunciation-button';
-import { QuizQuestion } from '@/types';
+import { TypingQuestion, DictationQuestion, MultipleChoiceQuestion } from '@/types';
 import { StorageService } from '@/lib/storage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, Clock, Volume2 } from 'lucide-react';
 
 interface QuizCardProps {
-  question: QuizQuestion;
+  question: TypingQuestion | DictationQuestion | MultipleChoiceQuestion;
   questionNumber: number;
   totalQuestions: number;
   onAnswer: (answer: string, timeSpent: number) => void;
@@ -39,7 +39,7 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
     if (selectedAnswer) return; // Prevent multiple selections
 
     const timeSpent = Date.now() - startTime;
-    const correct = answer === question.correctAnswer;
+    const correct = answer === ('correctAnswer' in question ? question.correctAnswer : '');
     
     setSelectedAnswer(answer);
     setIsCorrect(correct);
@@ -55,14 +55,14 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
 
   const getButtonVariant = (option: string) => {
     if (!showResult) return 'outline';
-    if (option === question.correctAnswer) return 'default';
+    if (option === ('correctAnswer' in question ? question.correctAnswer : '')) return 'default';
     if (option === selectedAnswer && !isCorrect) return 'destructive';
     return 'outline';
   };
 
   const getButtonClassName = (option: string) => {
     if (!showResult) return '';
-    if (option === question.correctAnswer) return 'bg-green-500 hover:bg-green-600 text-white';
+    if (option === ('correctAnswer' in question ? question.correctAnswer : '')) return 'bg-green-500 hover:bg-green-600 text-white';
     if (option === selectedAnswer && !isCorrect) return 'bg-red-500 hover:bg-red-600 text-white';
     return '';
   };
@@ -95,13 +95,13 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
           <div className="text-center py-8">
             <div className="flex items-center justify-center gap-3 mb-4">
               <h2 className="text-3xl font-bold text-gray-900">
-                {question.english}
+                {'question' in question ? question.question : 'audioText' in question ? question.audioText : ''}
               </h2>
               {settings.enablePronunciation && (
                 <PronunciationButton
-                  text={question.english}
+                  text={'question' in question ? question.question : 'audioText' in question ? question.audioText : ''}
                   language="english"
-                  size="md"
+                  size="default"
                 />
               )}
             </div>
@@ -110,7 +110,7 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
 
           {/* Answer Options */}
           <div className="grid gap-3">
-            {question.options.map((option, index) => (
+            {('options' in question ? question.options : []).map((option, index) => (
               <motion.div
                 key={`${question.id}-option-${index}`}
                 initial={{ opacity: 0, x: -20 }}
@@ -136,7 +136,7 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
                         />
                       )}
                     </div>
-                    {showResult && option === question.correctAnswer && (
+                    {showResult && option === ('correctAnswer' in question ? question.correctAnswer : '') && (
                       <CheckCircle className="w-5 h-5" />
                     )}
                     {showResult && option === selectedAnswer && !isCorrect && (
@@ -174,7 +174,7 @@ export function QuizCard({ question, questionNumber, totalQuestions, onAnswer, o
                 </div>
                 {!isCorrect && (
                   <p className="mt-2">
-                    The correct answer is: <strong>{question.correctAnswer}</strong>
+                    The correct answer is: <strong>{'correctAnswer' in question ? question.correctAnswer : ''}</strong>
                   </p>
                 )}
               </motion.div>

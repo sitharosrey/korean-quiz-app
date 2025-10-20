@@ -46,7 +46,7 @@ export class MatchGameService {
       totalPairs: actualPairs,
       startTime: new Date(),
       isCompleted: false,
-      excludedWord: isOddNumber ? wordsToUse[wordsToUse.length - 1] : null, // Store the excluded word
+      excludedWord: isOddNumber ? wordsToUse[wordsToUse.length - 1] : undefined, // Store the excluded word
     };
   }
   

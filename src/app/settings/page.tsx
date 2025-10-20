@@ -24,13 +24,17 @@ function SettingsPageContent() {
   const [settings, setSettings] = useState<AppSettings>({
     groqApiKey: '',
     defaultLanguage: 'korean',
-    quizMode: 'english-to-korean',
+    quizMode: 'multiple-choice',
+    quizDirection: 'korean-to-english',
     questionsPerQuiz: 10,
     enableSpacedRepetition: true,
     enablePronunciation: true,
     enableContextSentences: true,
     enableImages: true,
     autoFetchImages: false,
+    audioRate: 1.0,
+    audioPitch: 1.0,
+    audioVolume: 0.8,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -57,8 +61,8 @@ function SettingsPageContent() {
     setSettings(prev => ({ ...prev, defaultLanguage: value }));
   };
 
-  const handleQuizModeChange = (value: 'korean-to-english' | 'english-to-korean') => {
-    setSettings(prev => ({ ...prev, quizMode: value }));
+  const handleQuizDirectionChange = (value: 'korean-to-english' | 'english-to-korean') => {
+    setSettings(prev => ({ ...prev, quizDirection: value }));
   };
 
   const handleQuestionsPerQuizChange = (value: string) => {
@@ -162,8 +166,8 @@ function SettingsPageContent() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Default Quiz Mode</label>
                 <Select 
-                  value={settings.quizMode} 
-                  onValueChange={handleQuizModeChange}
+                  value={settings.quizDirection} 
+                  onValueChange={handleQuizDirectionChange}
                 >
                   <SelectTrigger>
                     <SelectValue />

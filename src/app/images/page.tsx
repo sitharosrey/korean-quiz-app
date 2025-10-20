@@ -180,16 +180,6 @@ function ImagesPageContent() {
                         {selectedWord.english}
                       </Badge>
                     </div>
-                    {selectedWord.pronunciation && (
-                      <p className="text-sm text-cyan-600 mb-2">
-                        Pronunciation: {selectedWord.pronunciation}
-                      </p>
-                    )}
-                    {selectedWord.notes && (
-                      <p className="text-sm text-cyan-700">
-                        Notes: {selectedWord.notes}
-                      </p>
-                    )}
                     {selectedWord.imageUrl && (
                       <div className="mt-3 p-2 bg-white rounded border border-cyan-200">
                         <p className="text-xs text-cyan-600 mb-2">Current Image:</p>

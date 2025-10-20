@@ -8,7 +8,7 @@ export interface QuizSession {
   lessonId: string;
   mode: QuizMode;
   direction: QuizDirection;
-  questions: QuizQuestion[];
+  questions: (TypingQuestion | DictationQuestion | MultipleChoiceQuestion)[];
   results: QuizResult[];
   currentQuestionIndex: number;
   startTime: Date;
@@ -90,7 +90,7 @@ export class EnhancedQuizService {
     words: WordPair[], 
     mode: QuizMode, 
     direction: QuizDirection
-  ): QuizQuestion[] {
+  ): (TypingQuestion | DictationQuestion | MultipleChoiceQuestion)[] {
     return words.map((word, index) => {
       const questionId = `question-${index + 1}`;
       
@@ -228,7 +228,7 @@ export class EnhancedQuizService {
    * Evaluate user's answer
    */
   private static evaluateAnswer(
-    question: QuizQuestion, 
+    question: TypingQuestion | DictationQuestion | MultipleChoiceQuestion, 
     userAnswer: string, 
     timeSpent: number
   ): QuizResult {
@@ -290,7 +290,7 @@ export class EnhancedQuizService {
    */
   private static updateWordProgress(
     session: QuizSession,
-    question: QuizQuestion, 
+    question: TypingQuestion | DictationQuestion | MultipleChoiceQuestion, 
     isCorrect: boolean, 
     timeSpent: number
   ): void {

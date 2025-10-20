@@ -28,8 +28,8 @@ export class AuthService {
       const users = JSON.parse(stored);
       return users.map((user: Record<string, unknown>) => ({
         ...user,
-        createdAt: new Date(user.createdAt),
-        lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : undefined,
+        createdAt: new Date(user.createdAt as string),
+        lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt as string) : undefined,
       }));
     } catch (error) {
       console.error('Error loading users:', error);

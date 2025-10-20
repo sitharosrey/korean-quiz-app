@@ -7,7 +7,7 @@ export interface AudioSettings {
 
 export class AudioService {
   private static instance: AudioService;
-  private synth: SpeechSynthesis;
+  private synth!: SpeechSynthesis;
   private voices: SpeechSynthesisVoice[] = [];
   private koreanVoice: SpeechSynthesisVoice | null = null;
   private settings: AudioSettings = {

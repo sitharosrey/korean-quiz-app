@@ -1,6 +1,6 @@
 export class PronunciationService {
   private static instance: PronunciationService;
-  private synth: SpeechSynthesis;
+  private synth!: SpeechSynthesis;
   private voices: SpeechSynthesisVoice[] = [];
   private koreanVoice: SpeechSynthesisVoice | null = null;
 

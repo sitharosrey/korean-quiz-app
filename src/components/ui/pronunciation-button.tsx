@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 interface PronunciationButtonProps {
   text: string;
   language?: 'korean' | 'english';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'default' | 'lg';
   variant?: 'default' | 'outline' | 'ghost';
   className?: string;
   disabled?: boolean;
@@ -18,7 +18,7 @@ interface PronunciationButtonProps {
 export function PronunciationButton({
   text,
   language = 'korean',
-  size = 'sm',
+  size = 'default',
   variant = 'ghost',
   className,
   disabled = false,
@@ -59,13 +59,13 @@ export function PronunciationButton({
 
   const sizeClasses = {
     sm: 'h-8 w-8 p-0',
-    md: 'h-10 w-10 p-0',
+    default: 'h-10 w-10 p-0',
     lg: 'h-12 w-12 p-0',
   };
 
   const iconSizes = {
     sm: 'h-4 w-4',
-    md: 'h-5 w-5',
+    default: 'h-5 w-5',
     lg: 'h-6 w-6',
   };
 

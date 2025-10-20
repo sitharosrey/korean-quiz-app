@@ -43,6 +43,13 @@ export function WordInputForm({ onWordsAdded, groqApiKey }: WordInputFormProps) 
         id: `word-${Date.now()}`,
         korean: newWord.korean.trim(),
         english: newWord.english.trim(),
+        difficulty: 0,
+        nextReviewDate: new Date(),
+        reviewCount: 0,
+        correctStreak: 0,
+        level: 0,
+        nextReview: new Date(),
+        totalXP: 0,
       };
       setWords(prev => [...prev, word]);
       setNewWord({ korean: '', english: '' });
@@ -123,6 +130,13 @@ export function WordInputForm({ onWordsAdded, groqApiKey }: WordInputFormProps) 
           id: `extracted-${Date.now()}-${index}`,
           korean,
           english: englishWords[index] || '', // Use corresponding English or empty
+          difficulty: 0,
+          nextReviewDate: new Date(),
+          reviewCount: 0,
+          correctStreak: 0,
+          level: 0,
+          nextReview: new Date(),
+          totalXP: 0,
         }));
 
         setWords(prev => [...prev, ...extractedWords]);
@@ -203,6 +217,13 @@ export function WordInputForm({ onWordsAdded, groqApiKey }: WordInputFormProps) 
             id: `translated-${Date.now()}-${i}`,
             korean: koreanWord,
             english: englishTranslation,
+            difficulty: 0,
+            nextReviewDate: new Date(),
+            reviewCount: 0,
+            correctStreak: 0,
+            level: 0,
+            nextReview: new Date(),
+            totalXP: 0,
           };
 
           translatedWords.push(wordPair);
@@ -225,6 +246,13 @@ export function WordInputForm({ onWordsAdded, groqApiKey }: WordInputFormProps) 
             id: `translated-${Date.now()}-${i}`,
             korean: koreanWord,
             english: '', // User can fill this in manually
+            difficulty: 0,
+            nextReviewDate: new Date(),
+            reviewCount: 0,
+            correctStreak: 0,
+            level: 0,
+            nextReview: new Date(),
+            totalXP: 0,
           };
           translatedWords.push(wordPair);
         }
