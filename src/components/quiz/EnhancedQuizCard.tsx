@@ -144,13 +144,6 @@ export function EnhancedQuizCard({
         break;
     }
 
-    console.log('=== DEBUG ===');
-    console.log('User Answer:', userAnswer);
-    console.log('Question Answer:', 'correctAnswer' in question ? question.correctAnswer : question.answer);
-    console.log('Question Correct Answer:', 'correctAnswer' in question ? question.correctAnswer : question.answer);
-    console.log('Local Correct:', localCorrect);
-    console.log('Question Type:', getQuestionType(question));
-    console.log('==============');
 
     // Set local state for UI feedback
     setIsAnswered(true);
@@ -186,11 +179,6 @@ export function EnhancedQuizCard({
     const localCorrect = selectedOption === ('correctAnswer' in question ? question.correctAnswer : '');
     const localConfidence = 1.0;
 
-    console.log('=== MULTIPLE CHOICE DEBUG ===');
-    console.log('Selected Option:', selectedOption);
-    console.log('Correct Answer:', 'correctAnswer' in question ? question.correctAnswer : '');
-    console.log('Local Correct:', localCorrect);
-    console.log('==============================');
 
     // Set all states at once
     setUserAnswer(selectedOption);
@@ -258,12 +246,11 @@ export function EnhancedQuizCard({
     }
     
     // Submit the stored answer when user clicks Next
+    // onAnswer will handle both evaluation AND advancing to next question
     if (storedAnswer && storedTimeSpent > 0) {
       onAnswer(storedAnswer, storedTimeSpent);
       setHasSubmittedAnswer(true);
     }
-    
-    onNext();
   };
 
   const formatTime = (ms: number) => {
@@ -340,7 +327,6 @@ export function EnhancedQuizCard({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Exit button clicked!');
                     onExit();
                   }}
                   className="inline-flex items-center justify-center h-8 rounded-md px-3 text-sm font-medium transition-all hover:bg-red-50 text-gray-500 hover:text-red-600"
@@ -392,9 +378,6 @@ export function EnhancedQuizCard({
               <div className="grid gap-2">
                 {(() => {
                   const options = 'options' in question ? question.options : [];
-                  console.log('Rendering options:', options);
-                  console.log('isAnswered:', isAnswered);
-                  console.log('hasSubmittedAnswer:', hasSubmittedAnswer);
                   return options.map((option, index) => (
                     <button
                       key={index}
@@ -405,10 +388,7 @@ export function EnhancedQuizCard({
                         isAnswered && option === ('correctAnswer' in question ? question.correctAnswer : '') && "border-green-500 bg-green-50 text-green-700"
                       )}
                       onClick={() => {
-                        console.log('Button clicked!', option);
-                        console.log('Can submit?', !isAnswered && !hasSubmittedAnswer);
                         if (!isAnswered && !hasSubmittedAnswer) {
-                          console.log('Calling handleMultipleChoiceSubmit');
                           handleMultipleChoiceSubmit(option);
                         }
                       }}

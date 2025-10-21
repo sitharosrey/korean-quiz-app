@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Brain, Upload, Settings, Gamepad2, BarChart3, Volume2, Sparkles, Target, Zap } from "lucide-react";
+import { BookOpen, Brain, Upload, Settings, Gamepad2, BarChart3, Volume2, Sparkles, Target, Zap, Shuffle, Keyboard, Headphones, FileText, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { PageContainer } from "@/components/layout/PageContainer";
 
@@ -102,12 +102,137 @@ export default function Home() {
         </p>
       </motion.div>
 
+      {/* Games Section */}
+      <motion.div 
+        className="mt-16"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.7 }}
+      >
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">
+          Brain Training Games
+        </h2>
+        <p className="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
+          Boost your memory and typing skills with fun, interactive games designed to help you master Korean vocabulary faster
+        </p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              title: "Match Pairs",
+              description: "Test your memory by matching Korean words with English translations",
+              icon: Gamepad2,
+              color: "bg-gradient-to-br from-blue-500 to-blue-600",
+              textColor: "text-blue-600",
+              bgColor: "bg-blue-50",
+              href: "/games/match-pairs",
+              xp: "10 XP per pair"
+            },
+            {
+              title: "Word Scramble",
+              description: "Unscramble Korean letters to form the correct words",
+              icon: Shuffle,
+              color: "bg-gradient-to-br from-green-500 to-green-600",
+              textColor: "text-green-600",
+              bgColor: "bg-green-50",
+              href: "/games/word-scramble",
+              xp: "15 XP per word"
+            },
+            {
+              title: "Speed Quiz",
+              description: "Race against the clock in rapid-fire vocabulary challenges",
+              icon: Zap,
+              color: "bg-gradient-to-br from-yellow-500 to-orange-500",
+              textColor: "text-yellow-600",
+              bgColor: "bg-yellow-50",
+              href: "/games/speed-quiz",
+              xp: "10-15 XP per question"
+            },
+            {
+              title: "Typing Challenge",
+              description: "Improve your Korean typing speed and accuracy",
+              icon: Keyboard,
+              color: "bg-gradient-to-br from-purple-500 to-purple-600",
+              textColor: "text-purple-600",
+              bgColor: "bg-purple-50",
+              href: "/games/typing-challenge",
+              xp: "12+ XP per word"
+            },
+            {
+              title: "Listening Practice",
+              description: "Listen to Korean pronunciation and identify the correct word",
+              icon: Headphones,
+              color: "bg-gradient-to-br from-pink-500 to-pink-600",
+              textColor: "text-pink-600",
+              bgColor: "bg-pink-50",
+              href: "/games/listening-practice",
+              xp: "15 XP per question"
+            },
+            {
+              title: "Fill in the Blanks",
+              description: "Complete Korean sentences with the correct words",
+              icon: FileText,
+              color: "bg-gradient-to-br from-cyan-500 to-cyan-600",
+              textColor: "text-cyan-600",
+              bgColor: "bg-cyan-50",
+              href: "/games/fill-blanks",
+              xp: "20 XP per sentence"
+            },
+            {
+              title: "Memory Chain",
+              description: "Remember sequences of Korean words and type them back",
+              icon: Brain,
+              color: "bg-gradient-to-br from-indigo-500 to-indigo-600",
+              textColor: "text-indigo-600",
+              bgColor: "bg-indigo-50",
+              href: "/games/memory-chain",
+              xp: "25 XP per round"
+            },
+            {
+              title: "True or False",
+              description: "Quick-fire quiz to test your translation skills",
+              icon: CheckCircle,
+              color: "bg-gradient-to-br from-red-500 to-red-600",
+              textColor: "text-red-600",
+              bgColor: "bg-red-50",
+              href: "/games/true-false",
+              xp: "8 XP + streaks"
+            }
+          ].map((game, index) => (
+            <motion.div
+              key={game.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
+            >
+              <Link href={game.href}>
+                <Card className="hover:shadow-xl transition-all hover:-translate-y-1 h-full cursor-pointer group">
+                  <CardHeader>
+                    <div className={`w-16 h-16 ${game.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                      <game.icon className="w-8 h-8 text-white" />
+                    </div>
+                    <CardTitle className="text-lg mb-2">{game.title}</CardTitle>
+                    <CardDescription className="mb-3">
+                      {game.description}
+                    </CardDescription>
+                    <div className={`inline-block px-3 py-1 ${game.bgColor} rounded-full`}>
+                      <span className={`text-xs font-semibold ${game.textColor}`}>
+                        {game.xp}
+                      </span>
+                    </div>
+                  </CardHeader>
+                </Card>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
       {/* How to Use Section */}
       <motion.div 
         className="mt-16"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.8 }}
+        transition={{ duration: 0.6, delay: 1.2 }}
       >
         <h2 className="text-3xl font-bold text-gray-900 text-center mb-8">
           Quick Actions

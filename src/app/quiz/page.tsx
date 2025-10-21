@@ -119,53 +119,31 @@ function QuizPageContent() {
   const handleAnswer = (answer: string, timeSpent: number) => {
     if (!quizSession) return;
 
-    // Store the answer and time spent, but don't advance the quiz yet
-    // The quiz will only advance when user clicks "Next"
-    const currentQuestion = quizSession.questions[quizSession.currentQuestionIndex];
+    // Immediately evaluate and submit the answer
+    const isLastQuestion = quizSession.currentQuestionIndex === quizSession.questions.length - 1;
     
-    // Create a result for this question
-    const result = {
-      questionId: currentQuestion.id,
-      userAnswer: answer,
-      isCorrect: false, // Will be evaluated when user clicks Next
-      timeSpent: timeSpent,
-      xpEarned: 0, // Will be calculated when user clicks Next
-      confidence: 1.0
-    };
-
-    // Update session with the result but don't advance
-    const updatedSession = {
-      ...quizSession,
-      results: [...quizSession.results, result]
-    };
+    const { session: updatedSession } = EnhancedQuizService.submitAnswer(
+      quizSession, 
+      answer, 
+      timeSpent
+    );
     
-    setQuizSession(updatedSession);
+    // If this was the last question, mark as completed
+    if (isLastQuestion) {
+      setQuizSession({
+        ...updatedSession,
+        isCompleted: true,
+        endTime: new Date()
+      });
+    } else {
+      setQuizSession(updatedSession);
+    }
   };
 
   const handleNext = () => {
-    if (!quizSession) return;
-
-    // Get the current question and the last result
-    const currentQuestion = quizSession.questions[quizSession.currentQuestionIndex];
-    const lastResult = quizSession.results[quizSession.results.length - 1];
-    
-    if (lastResult && lastResult.questionId === currentQuestion.id) {
-      // Evaluate the answer and update the result
-      const { session: updatedSession } = EnhancedQuizService.submitAnswer(
-        quizSession, 
-        lastResult.userAnswer, 
-        lastResult.timeSpent
-      );
-      setQuizSession(updatedSession);
-    } else {
-      // No answer submitted yet, just advance to next question
-      const nextSession = {
-        ...quizSession,
-        currentQuestionIndex: quizSession.currentQuestionIndex + 1,
-        isCompleted: quizSession.currentQuestionIndex + 1 >= quizSession.questions.length
-      };
-      setQuizSession(nextSession);
-    }
+    // This is now just for navigation, actual submission happens in handleAnswer
+    // This function is kept for compatibility but doesn't need to do anything
+    // The answer has already been processed
   };
 
   const restartQuiz = () => {

@@ -65,7 +65,8 @@ function MatchPairsPageContent() {
       return;
     }
 
-    const session = MatchGameService.createGameSession(lesson, maxPairs);
+    const pairs = maxPairs === 999 ? Math.floor(lesson.words.length / 2) : maxPairs;
+    const session = MatchGameService.createGameSession(lesson, pairs);
     setGameSession(session);
     toast.success(`Started match game with ${session.totalPairs} pairs`);
   };
@@ -88,8 +89,27 @@ function MatchPairsPageContent() {
   };
 
   const restartGame = () => {
-    setGameSession(null);
-    startGame();
+    // Start a new game with the same settings (new randomized cards)
+    if (!selectedLessonId) {
+      toast.error('Please select a lesson');
+      return;
+    }
+
+    const lesson = lessons.find(l => l.id === selectedLessonId);
+    if (!lesson) {
+      toast.error('Lesson not found');
+      return;
+    }
+
+    if (lesson.words.length === 0) {
+      toast.error('This lesson has no words. Please add some words first.');
+      return;
+    }
+
+    const pairs = maxPairs === 999 ? Math.floor(lesson.words.length / 2) : maxPairs;
+    const session = MatchGameService.createGameSession(lesson, pairs);
+    setGameSession(session);
+    toast.success(`Started new game with ${session.totalPairs} pairs`);
   };
 
   const exitGame = () => {
@@ -183,22 +203,10 @@ function MatchPairsPageContent() {
 
             {/* Number of Pairs */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">Number of Pairs</label>
-                {selectedLesson && selectedLesson.words.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMaxPairs(Math.min(Math.floor(selectedLesson.words.length / 2), 12))}
-                    className="text-xs"
-                  >
-                    Use All {Math.min(Math.floor(selectedLesson.words.length / 2), 12)} Pairs
-                  </Button>
-                )}
-              </div>
+              <label className="text-sm font-medium text-gray-700">Number of Pairs</label>
               <Select 
-                value={maxPairs.toString()} 
-                onValueChange={(value) => setMaxPairs(parseInt(value))}
+                value={maxPairs === 999 ? "all" : maxPairs.toString()} 
+                onValueChange={(value) => setMaxPairs(value === "all" ? 999 : parseInt(value))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -209,16 +217,17 @@ function MatchPairsPageContent() {
                   <SelectItem value="8">8 pairs (16 cards)</SelectItem>
                   <SelectItem value="10">10 pairs (20 cards)</SelectItem>
                   <SelectItem value="12">12 pairs (24 cards)</SelectItem>
-                  {selectedLesson && Math.floor(selectedLesson.words.length / 2) > 12 && (
-                    <SelectItem value={Math.min(Math.floor(selectedLesson.words.length / 2), 16).toString()}>
-                      All {Math.min(Math.floor(selectedLesson.words.length / 2), 16)} pairs
-                    </SelectItem>
-                  )}
+                  <SelectItem value="all">All pairs</SelectItem>
                 </SelectContent>
               </Select>
-              {selectedLesson && (
+              {selectedLesson && maxPairs === 999 && (
+                <p className="text-sm text-green-600">
+                  Will use all {Math.floor(selectedLesson.words.length / 2)} pairs
+                </p>
+              )}
+              {selectedLesson && maxPairs !== 999 && (
                 <p className="text-sm text-gray-500">
-                  Maximum: {Math.min(Math.floor(selectedLesson.words.length / 2), 16)} pairs (based on lesson size)
+                  Maximum: {Math.floor(selectedLesson.words.length / 2)} pairs available
                 </p>
               )}
             </div>

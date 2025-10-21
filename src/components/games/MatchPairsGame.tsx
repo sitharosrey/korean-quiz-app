@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -33,6 +33,18 @@ export function MatchPairsGame({ session, onGameComplete, onRestart, onExit }: M
   const [gameSession, setGameSession] = useState<MatchGameSession>(session);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isGameActive, setIsGameActive] = useState(true);
+  const completedSessionIdRef = useRef<string | null>(null);
+
+  // Sync local state with prop when a new session is passed
+  useEffect(() => {
+    // When a new session comes in (different ID), update everything
+    if (gameSession.id !== session.id) {
+      setGameSession(session);
+      setTimeElapsed(0);
+      setIsGameActive(true); // Always activate for a new session
+      completedSessionIdRef.current = null; // Reset completion tracking
+    }
+  }, [session.id, gameSession.id]); // Watch session.id specifically
 
   // Timer effect
   useEffect(() => {
@@ -47,11 +59,12 @@ export function MatchPairsGame({ session, onGameComplete, onRestart, onExit }: M
 
   // Check for game completion
   useEffect(() => {
-    if (gameSession.isCompleted) {
+    if (gameSession.isCompleted && isGameActive && completedSessionIdRef.current !== gameSession.id) {
       setIsGameActive(false);
+      completedSessionIdRef.current = gameSession.id; // Mark this session as completed
       onGameComplete(gameSession);
     }
-  }, [gameSession.isCompleted, onGameComplete]);
+  }, [gameSession.isCompleted, gameSession.id, isGameActive, onGameComplete]);
 
   const handleCardClick = (cardId: string) => {
     if (!isGameActive || gameSession.isCompleted) return;
@@ -92,6 +105,7 @@ export function MatchPairsGame({ session, onGameComplete, onRestart, onExit }: M
 
   if (gameSession.isCompleted) {
     const stats = MatchGameService.getGameStats(gameSession);
+    const xpEarned = gameSession.totalPairs * 10; // 10 XP per pair
     
     return (
       <motion.div
@@ -112,7 +126,7 @@ export function MatchPairsGame({ session, onGameComplete, onRestart, onExit }: M
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Game Stats */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Timer className="w-5 h-5 text-blue-600" />
@@ -130,6 +144,16 @@ export function MatchPairsGame({ session, onGameComplete, onRestart, onExit }: M
                 </div>
                 <p className="text-2xl font-bold text-green-600">
                   {Math.round(stats.accuracy * 100)}%
+                </p>
+              </div>
+
+              <div className="p-4 bg-yellow-50 rounded-lg">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Trophy className="w-5 h-5 text-yellow-600" />
+                  <span className="font-semibold text-yellow-900">XP Earned</span>
+                </div>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {xpEarned}
                 </p>
               </div>
             </div>

@@ -82,30 +82,40 @@ export class AudioService {
       // Cancel any ongoing speech
       this.synth.cancel();
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Set language and voice
-      utterance.lang = lang;
-      if (lang === 'ko-KR' && this.koreanVoice) {
-        utterance.voice = this.koreanVoice;
-      }
+      // Small delay to ensure cancellation completes
+      setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Set language and voice
+        utterance.lang = lang;
+        if (lang === 'ko-KR' && this.koreanVoice) {
+          utterance.voice = this.koreanVoice;
+        }
 
-      // Optimized settings for Korean pronunciation
-      if (lang === 'ko-KR') {
-        utterance.rate = 0.7; // Slower for better clarity
-        utterance.pitch = 1.1; // Slightly higher pitch
-        utterance.volume = 1.0; // Full volume
-      } else {
-        // Apply user settings for other languages
-        utterance.rate = this.settings.rate;
-        utterance.pitch = this.settings.pitch;
-        utterance.volume = this.settings.volume;
-      }
+        // Optimized settings for Korean pronunciation
+        if (lang === 'ko-KR') {
+          utterance.rate = 0.7; // Slower for better clarity
+          utterance.pitch = 1.1; // Slightly higher pitch
+          utterance.volume = 1.0; // Full volume
+        } else {
+          // Apply user settings for other languages
+          utterance.rate = this.settings.rate;
+          utterance.pitch = this.settings.pitch;
+          utterance.volume = this.settings.volume;
+        }
 
-      utterance.onend = () => resolve();
-      utterance.onerror = (event) => reject(new Error(`Speech synthesis error: ${event.error}`));
+        utterance.onend = () => resolve();
+        utterance.onerror = (event) => {
+          // Ignore "interrupted" and "canceled" errors as they're expected when cancelling previous speech
+          if (event.error === 'interrupted' || event.error === 'canceled') {
+            resolve(); // Treat as successful completion
+          } else {
+            reject(new Error(`Speech synthesis error: ${event.error}`));
+          }
+        };
 
-      this.synth.speak(utterance);
+        this.synth.speak(utterance);
+      }, 50);
     });
   }
 
