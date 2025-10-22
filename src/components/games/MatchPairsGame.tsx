@@ -213,23 +213,6 @@ export function MatchPairsGame({ session, onGameComplete, onRestart, onExit }: M
             </div>
           </div>
           <Progress value={progress} className="mt-4" />
-          
-          {/* Excluded Word Notice */}
-          {gameSession.excludedWord && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <p className="text-yellow-800 font-medium">
-                    Note: One word couldn't be paired
-                  </p>
-                  <p className="text-yellow-700 mt-1">
-                    "{gameSession.excludedWord.korean}" ({gameSession.excludedWord.english}) was excluded because you have an odd number of words.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </CardHeader>
       </Card>
 

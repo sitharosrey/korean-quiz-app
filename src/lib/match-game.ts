@@ -5,15 +5,13 @@ export class MatchGameService {
     // Limit the number of pairs to avoid overwhelming the player
     const wordsToUse = lesson.words.slice(0, Math.min(maxPairs, lesson.words.length));
     
-    // Check if we have an odd number of words
-    const isOddNumber = wordsToUse.length % 2 === 1;
-    const actualPairs = isOddNumber ? wordsToUse.length - 1 : wordsToUse.length;
+    // Each word creates one pair (Korean card + English card)
+    const totalPairs = wordsToUse.length;
     
-    // Create cards for each word pair (only use even number of words)
+    // Create cards for each word
     const cards: MatchGameCard[] = [];
-    const wordsForGame = isOddNumber ? wordsToUse.slice(0, -1) : wordsToUse;
     
-    wordsForGame.forEach((word, index) => {
+    wordsToUse.forEach((word, index) => {
       // Korean card
       cards.push({
         id: `korean-${word.id}`,
@@ -43,10 +41,9 @@ export class MatchGameService {
       lessonId: lesson.id,
       cards: shuffledCards,
       matchedPairs: 0,
-      totalPairs: actualPairs,
+      totalPairs: totalPairs,
       startTime: new Date(),
       isCompleted: false,
-      excludedWord: isOddNumber ? wordsToUse[wordsToUse.length - 1] : undefined, // Store the excluded word
     };
   }
   

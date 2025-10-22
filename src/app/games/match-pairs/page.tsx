@@ -35,7 +35,7 @@ function MatchPairsPageContent() {
     if (selectedLessonId) {
       const lesson = lessons.find(l => l.id === selectedLessonId);
       if (lesson) {
-        const maxPossiblePairs = Math.min(Math.floor(lesson.words.length / 2), 16);
+        const maxPossiblePairs = Math.min(lesson.words.length, 16);
         // Set to maximum possible pairs for this lesson
         setMaxPairs(maxPossiblePairs);
       }
@@ -65,7 +65,7 @@ function MatchPairsPageContent() {
       return;
     }
 
-    const pairs = maxPairs === 999 ? Math.floor(lesson.words.length / 2) : maxPairs;
+    const pairs = maxPairs === 999 ? lesson.words.length : maxPairs;
     const session = MatchGameService.createGameSession(lesson, pairs);
     setGameSession(session);
     toast.success(`Started match game with ${session.totalPairs} pairs`);
@@ -106,7 +106,7 @@ function MatchPairsPageContent() {
       return;
     }
 
-    const pairs = maxPairs === 999 ? Math.floor(lesson.words.length / 2) : maxPairs;
+    const pairs = maxPairs === 999 ? lesson.words.length : maxPairs;
     const session = MatchGameService.createGameSession(lesson, pairs);
     setGameSession(session);
     toast.success(`Started new game with ${session.totalPairs} pairs`);
@@ -222,12 +222,12 @@ function MatchPairsPageContent() {
               </Select>
               {selectedLesson && maxPairs === 999 && (
                 <p className="text-sm text-green-600">
-                  Will use all {Math.floor(selectedLesson.words.length / 2)} pairs
+                  Will use all {selectedLesson.words.length} pairs ({selectedLesson.words.length * 2} cards)
                 </p>
               )}
               {selectedLesson && maxPairs !== 999 && (
                 <p className="text-sm text-gray-500">
-                  Maximum: {Math.floor(selectedLesson.words.length / 2)} pairs available
+                  Maximum: {selectedLesson.words.length} pairs available ({selectedLesson.words.length * 2} cards)
                 </p>
               )}
             </div>
@@ -252,27 +252,9 @@ function MatchPairsPageContent() {
                   <h3 className="font-semibold text-blue-900 mb-2">{selectedLesson.name}</h3>
                   <p className="text-blue-700 text-sm">
                     {selectedLesson.words.length} words available • 
-                    Game will use {Math.min(maxPairs, Math.floor(selectedLesson.words.length / 2))} pairs
+                    Game will use {Math.min(maxPairs === 999 ? selectedLesson.words.length : maxPairs, selectedLesson.words.length)} pairs ({Math.min(maxPairs === 999 ? selectedLesson.words.length : maxPairs, selectedLesson.words.length) * 2} cards)
                   </p>
                 </div>
-                
-                {/* Odd Number Warning */}
-                {selectedLesson.words.length % 2 === 1 && (
-                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm">
-                        <p className="text-yellow-800 font-medium">
-                          Odd number of words detected
-                        </p>
-                        <p className="text-yellow-700 mt-1">
-                          You have {selectedLesson.words.length} words, but the game needs pairs. 
-                          One word will be excluded from the game.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
