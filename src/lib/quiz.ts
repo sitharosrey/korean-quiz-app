@@ -85,6 +85,7 @@ export class QuizService {
     return {
       id: `quiz-${Date.now()}`,
       lessonId: lesson.id,
+      lessonIds: [lesson.id], // Support for multi-lesson quiz
       mode: 'multiple-choice' as const,
       direction: reverseMode ? 'korean-to-english' as const : 'english-to-korean' as const,
       questions,

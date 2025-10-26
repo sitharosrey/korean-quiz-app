@@ -5,7 +5,8 @@ import { StorageService } from './storage';
 
 export interface QuizSession {
   id: string;
-  lessonId: string;
+  lessonId: string; // For backward compatibility
+  lessonIds: string[]; // Support multiple lessons
   mode: QuizMode;
   direction: QuizDirection;
   questions: (TypingQuestion | DictationQuestion | MultipleChoiceQuestion)[];
@@ -29,21 +30,41 @@ export interface QuizResult {
 export class EnhancedQuizService {
   /**
    * Create a new quiz session with the specified mode
+   * Supports both single lesson and multiple lessons
    */
   static createQuizSession(
-    lesson: Lesson, 
+    lessonOrLessons: Lesson | Lesson[], 
     questionCount: number,
     mode: QuizMode, 
     direction: QuizDirection
   ): QuizSession {
-    const wordsToUse = this.selectWordsForQuiz(lesson, questionCount);
+    const lessons = Array.isArray(lessonOrLessons) ? lessonOrLessons : [lessonOrLessons];
+    const lessonIds = lessons.map(l => l.id);
+    
+    // Merge all words from selected lessons
+    const allWords = lessons.reduce((acc, lesson) => {
+      return [...acc, ...lesson.words];
+    }, [] as WordPair[]);
+    
+    // Create a virtual lesson with all words
+    const combinedLesson: Lesson = {
+      id: lessons[0].id, // Use first lesson ID for backward compatibility
+      name: lessons.length > 1 ? 'Combined Lessons' : lessons[0].name,
+      words: allWords,
+      createdAt: lessons[0].createdAt,
+      updatedAt: new Date(),
+    };
+    
+    const wordsToUse = this.selectWordsForQuiz(combinedLesson, questionCount);
     const questions = this.generateQuestions(wordsToUse, mode, direction);
     
     console.log('Creating quiz session:', {
-      lessonId: lesson.id,
+      lessonIds,
+      lessonCount: lessons.length,
       questionCount,
       mode,
       direction,
+      totalWords: allWords.length,
       wordsToUse: wordsToUse.length,
       questions: questions.length,
       firstQuestion: questions[0]
@@ -51,7 +72,8 @@ export class EnhancedQuizService {
     
     return {
       id: `quiz-${Date.now()}`,
-      lessonId: lesson.id,
+      lessonId: lessons[0].id, // For backward compatibility
+      lessonIds,
       mode,
       direction,
       questions,
@@ -296,41 +318,49 @@ export class EnhancedQuizService {
   ): void {
     // Find the word in lessons and update its progress
     const lessons = StorageService.getLessons();
-    const lesson = lessons.find(l => l.id === session.lessonId);
     
-    if (!lesson) return;
+    // Check all lessons that are part of this quiz session
+    const sessionLessonIds = session.lessonIds || [session.lessonId];
     
-    // Find the word that corresponds to this question
-    let word: SRSWord | undefined;
-    
-    switch (question.type) {
-      case 'typing':
-        word = lesson.words.find(w => 
-          w.korean === question.answer || w.english === question.answer
-        ) as SRSWord;
-        break;
-      case 'dictation':
-        word = lesson.words.find(w => 
-          w.korean === question.answer
-        ) as SRSWord;
-        break;
-      case 'multiple-choice':
-        word = lesson.words.find(w => 
-          w.korean === question.correctAnswer || w.english === question.correctAnswer
-        ) as SRSWord;
-        break;
+    for (const lessonId of sessionLessonIds) {
+      const lesson = lessons.find(l => l.id === lessonId);
+      if (!lesson) continue;
+      
+      // Find the word that corresponds to this question
+      let word: SRSWord | undefined;
+      
+      switch (question.type) {
+        case 'typing':
+          word = lesson.words.find(w => 
+            w.korean === question.answer || w.english === question.answer
+          ) as SRSWord;
+          break;
+        case 'dictation':
+          word = lesson.words.find(w => 
+            w.korean === question.answer
+          ) as SRSWord;
+          break;
+        case 'multiple-choice':
+          word = lesson.words.find(w => 
+            w.korean === question.correctAnswer || w.english === question.correctAnswer
+          ) as SRSWord;
+          break;
+      }
+      
+      if (!word) continue;
+      
+      // Update word using SRS
+      const updatedWord = SRSService.updateWordProgress(word, isCorrect, timeSpent);
+      
+      // Update the lesson
+      const updatedWords = lesson.words.map(w => w.id === word!.id ? updatedWord : w);
+      const updatedLesson = { ...lesson, words: updatedWords };
+      
+      StorageService.updateLesson(updatedLesson);
+      
+      // Word found and updated, no need to check other lessons
+      break;
     }
-    
-    if (!word) return;
-    
-    // Update word using SRS
-    const updatedWord = SRSService.updateWordProgress(word, isCorrect, timeSpent);
-    
-    // Update the lesson
-    const updatedWords = lesson.words.map(w => w.id === word!.id ? updatedWord : w);
-    const updatedLesson = { ...lesson, words: updatedWords };
-    
-    StorageService.updateLesson(updatedLesson);
   }
 
   /**

@@ -12,6 +12,7 @@ import { QuizResults } from '@/components/quiz/QuizResults';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Dialog, 
   DialogContent, 
@@ -40,7 +41,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 function QuizPageContent() {
   const searchParams = useSearchParams();
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [selectedLessonId, setSelectedLessonId] = useState<string>('');
+  const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([]);
   const [quizMode, setQuizMode] = useState<QuizMode>('multiple-choice');
   const [quizDirection, setQuizDirection] = useState<QuizDirection>('korean-to-english');
   const [questionCount, setQuestionCount] = useState(10);
@@ -54,23 +55,25 @@ function QuizPageContent() {
     const modeParam = searchParams.get('mode') as QuizMode;
     const directionParam = searchParams.get('direction') as QuizDirection;
     
-    if (lessonParam) setSelectedLessonId(lessonParam);
+    if (lessonParam) setSelectedLessonIds([lessonParam]);
     if (modeParam) setQuizMode(modeParam);
     if (directionParam) setQuizDirection(directionParam);
   }, [searchParams]);
 
-  // Auto-adjust quiz questions when lesson changes
+  // Auto-adjust quiz questions when lessons change
   useEffect(() => {
-    if (selectedLessonId) {
-      const lesson = lessons.find(l => l.id === selectedLessonId);
-      if (lesson && lesson.words.length > 0) {
+    if (selectedLessonIds.length > 0) {
+      const selectedLessons = lessons.filter(l => selectedLessonIds.includes(l.id));
+      const totalWords = selectedLessons.reduce((sum, lesson) => sum + lesson.words.length, 0);
+      
+      if (totalWords > 0) {
         // If current setting is higher than available words, adjust it
-        if (questionCount > lesson.words.length) {
-          setQuestionCount(lesson.words.length);
+        if (questionCount > totalWords) {
+          setQuestionCount(totalWords);
         }
       }
     }
-  }, [selectedLessonId, lessons, questionCount]);
+  }, [selectedLessonIds, lessons, questionCount]);
 
   const loadLessons = () => {
     const storedLessons = StorageService.getLessons();
@@ -79,37 +82,41 @@ function QuizPageContent() {
   };
 
   const startQuiz = async () => {
-    if (!selectedLessonId) {
-      toast.error('Please select a lesson');
+    if (selectedLessonIds.length === 0) {
+      toast.error('Please select at least one lesson');
       return;
     }
 
-    const lesson = lessons.find(l => l.id === selectedLessonId);
-    if (!lesson) {
-      toast.error('Lesson not found');
+    const selectedLessons = lessons.filter(l => selectedLessonIds.includes(l.id));
+    if (selectedLessons.length === 0) {
+      toast.error('Selected lessons not found');
       return;
     }
 
-    if (lesson.words.length === 0) {
-      toast.error('This lesson has no words. Please add some words first.');
+    const totalWords = selectedLessons.reduce((sum, lesson) => sum + lesson.words.length, 0);
+    if (totalWords === 0) {
+      toast.error('Selected lessons have no words. Please add some words first.');
       return;
     }
 
     try {
       const session = EnhancedQuizService.createQuizSession(
-        lesson,
-        Math.min(questionCount, lesson.words.length),
+        selectedLessons.length === 1 ? selectedLessons[0] : selectedLessons,
+        Math.min(questionCount, totalWords),
         quizMode,
         quizDirection
       );
 
       if (!session.questions || session.questions.length === 0) {
-        toast.error('Failed to generate questions. Please check your lesson has words.');
+        toast.error('Failed to generate questions. Please check your lessons have words.');
         return;
       }
 
       setQuizSession(session);
-      toast.success(`Started ${quizMode} quiz with ${session.questions.length} questions`);
+      const lessonText = selectedLessons.length === 1 
+        ? selectedLessons[0].name 
+        : `${selectedLessons.length} lessons`;
+      toast.success(`Started ${quizMode} quiz from ${lessonText} with ${session.questions.length} questions`);
     } catch (error) {
       console.error('Failed to start quiz:', error);
       toast.error('Failed to start quiz');
@@ -166,7 +173,8 @@ function QuizPageContent() {
     setShowExitDialog(false);
   };
 
-  const selectedLesson = lessons.find(l => l.id === selectedLessonId);
+  const selectedLessons = lessons.filter(l => selectedLessonIds.includes(l.id));
+  const totalSelectedWords = selectedLessons.reduce((sum, lesson) => sum + lesson.words.length, 0);
 
   if (isLoading) {
     return (
@@ -322,26 +330,75 @@ function QuizPageContent() {
               <CardContent className="space-y-6">
                 {/* Lesson Selection */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Select Lesson</label>
-                  <Select value={selectedLessonId} onValueChange={setSelectedLessonId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a lesson to quiz on" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {lessons.map((lesson) => (
-                        <SelectItem 
-                          key={lesson.id} 
-                          value={lesson.id}
-                          disabled={lesson.words.length === 0}
-                        >
-                          {lesson.name} ({lesson.words.length} words)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {lessons.length === 0 && (
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">Select Lessons</label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedLessonIds(lessons.filter(l => l.words.length > 0).map(l => l.id))}
+                        className="text-xs"
+                        disabled={lessons.length === 0}
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedLessonIds([])}
+                        className="text-xs"
+                        disabled={selectedLessonIds.length === 0}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {lessons.length === 0 ? (
                     <p className="text-sm text-gray-500">
                       No lessons available. <Link href="/lessons" className="text-blue-500 hover:underline">Create a lesson first</Link>.
+                    </p>
+                  ) : (
+                    <div className="border rounded-lg p-3 max-h-64 overflow-y-auto space-y-2">
+                      {lessons.map((lesson) => (
+                        <div
+                          key={lesson.id}
+                          className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 ${
+                            lesson.words.length === 0 ? 'opacity-50' : ''
+                          }`}
+                        >
+                          <Checkbox
+                            id={`lesson-${lesson.id}`}
+                            checked={selectedLessonIds.includes(lesson.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedLessonIds([...selectedLessonIds, lesson.id]);
+                              } else {
+                                setSelectedLessonIds(selectedLessonIds.filter(id => id !== lesson.id));
+                              }
+                            }}
+                            disabled={lesson.words.length === 0}
+                          />
+                          <label
+                            htmlFor={`lesson-${lesson.id}`}
+                            className="flex-1 text-sm font-medium cursor-pointer"
+                          >
+                            {lesson.name}
+                            <span className="text-gray-500 ml-2">
+                              ({lesson.words.length} words)
+                            </span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {selectedLessonIds.length > 0 && (
+                    <p className="text-sm text-gray-600">
+                      {selectedLessonIds.length === 1 
+                        ? '1 lesson selected' 
+                        : `${selectedLessonIds.length} lessons selected`} 
+                      ({totalSelectedWords} total words)
                     </p>
                   )}
                 </div>
@@ -394,14 +451,14 @@ function QuizPageContent() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-gray-700">Number of Questions</label>
-                    {selectedLesson && selectedLesson.words.length > 0 && (
+                    {totalSelectedWords > 0 && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setQuestionCount(selectedLesson.words.length)}
+                        onClick={() => setQuestionCount(totalSelectedWords)}
                         className="text-xs"
                       >
-                        Use All {selectedLesson.words.length} Words
+                        Use All {totalSelectedWords} Words
                       </Button>
                     )}
                   </div>
@@ -419,16 +476,16 @@ function QuizPageContent() {
                       <SelectItem value="20">20 questions</SelectItem>
                       <SelectItem value="25">25 questions</SelectItem>
                       <SelectItem value="30">30 questions</SelectItem>
-                      {selectedLesson && selectedLesson.words.length > 30 && (
-                        <SelectItem value={selectedLesson.words.length.toString()}>
-                          All {selectedLesson.words.length} questions
+                      {totalSelectedWords > 30 && (
+                        <SelectItem value={totalSelectedWords.toString()}>
+                          All {totalSelectedWords} questions
                         </SelectItem>
                       )}
                     </SelectContent>
                   </Select>
-                  {selectedLesson && (
+                  {totalSelectedWords > 0 && (
                     <p className="text-sm text-gray-500">
-                      Maximum: {selectedLesson.words.length} questions (based on lesson size)
+                      Maximum: {totalSelectedWords} questions (from {selectedLessonIds.length} {selectedLessonIds.length === 1 ? 'lesson' : 'lessons'})
                     </p>
                   )}
                 </div>
@@ -439,7 +496,7 @@ function QuizPageContent() {
                     onClick={startQuiz} 
                     size="lg" 
                     className="w-full"
-                    disabled={!selectedLessonId || !selectedLesson || selectedLesson.words.length === 0}
+                    disabled={selectedLessonIds.length === 0 || totalSelectedWords === 0}
                   >
                     <Play className="w-5 h-5 mr-2" />
                     Start Enhanced Quiz
@@ -498,28 +555,53 @@ function QuizPageContent() {
             </Card>
 
             {/* Lesson Info */}
-            {selectedLesson && (
+            {selectedLessonIds.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Trophy className="w-5 h-5" />
-                    Lesson Info
+                    {selectedLessonIds.length === 1 ? 'Lesson Info' : 'Lessons Info'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{selectedLesson.name}</h3>
-                      <p className="text-sm text-gray-600">{selectedLesson.words.length} words</p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock className="w-4 h-4" />
-                      <span>{selectedLesson.words.length} words available</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Target className="w-4 h-4" />
-                      <span>Quiz will use {Math.min(questionCount, selectedLesson.words.length)} questions</span>
-                    </div>
+                    {selectedLessonIds.length === 1 ? (
+                      <>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{selectedLessons[0].name}</h3>
+                          <p className="text-sm text-gray-600">{selectedLessons[0].words.length} words</p>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          <span>{selectedLessons[0].words.length} words available</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Target className="w-4 h-4" />
+                          <span>Quiz will use {Math.min(questionCount, selectedLessons[0].words.length)} questions</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{selectedLessonIds.length} Lessons Selected</h3>
+                          <div className="mt-2 space-y-1">
+                            {selectedLessons.map((lesson) => (
+                              <p key={lesson.id} className="text-sm text-gray-600">
+                                • {lesson.name} ({lesson.words.length} words)
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          <span>{totalSelectedWords} total words available</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Target className="w-4 h-4" />
+                          <span>Quiz will use {Math.min(questionCount, totalSelectedWords)} questions</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
