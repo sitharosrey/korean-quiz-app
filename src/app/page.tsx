@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Brain, Upload, Settings, Gamepad2, BarChart3, Volume2, Sparkles, Target, Zap, Shuffle, Keyboard, Headphones, FileText, CheckCircle } from "lucide-react";
+import { BookOpen, Brain, Upload, Settings, Gamepad2, BarChart3, Volume2, Sparkles, Target, Zap, Shuffle, Keyboard, Headphones, FileText, CheckCircle, Layers } from "lucide-react";
 import { motion } from "framer-motion";
 import { PageContainer } from "@/components/layout/PageContainer";
 
@@ -196,6 +196,16 @@ export default function Home() {
               bgColor: "bg-red-50",
               href: "/games/true-false",
               xp: "8 XP + streaks"
+            },
+            {
+              title: "Flashcard Study",
+              description: "Master vocabulary with classic flashcard memorization",
+              icon: Layers,
+              color: "bg-gradient-to-br from-teal-500 to-teal-600",
+              textColor: "text-teal-600",
+              bgColor: "bg-teal-50",
+              href: "/games/flashcard",
+              xp: "10 XP + bonuses"
             }
           ].map((game, index) => (
             <motion.div
