@@ -34,6 +34,7 @@ export function TypingChallengeGame({ session, onGameComplete, onRestart, onExit
   const [hasStarted, setHasStarted] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [lastResult, setLastResult] = useState<{ isCorrect: boolean; correctAnswer: string } | null>(null);
+  const [completionHandled, setCompletionHandled] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync with prop changes
@@ -44,6 +45,7 @@ export function TypingChallengeGame({ session, onGameComplete, onRestart, onExit
       setHasStarted(false);
       setShowResult(false);
       setLastResult(null);
+      setCompletionHandled(false);
     }
   }, [session.id, gameSession.id]);
 
@@ -63,12 +65,13 @@ export function TypingChallengeGame({ session, onGameComplete, onRestart, onExit
     }
   }, [showResult, gameSession.isCompleted, gameSession.currentWordIndex]);
 
-  // Check for completion
+  // Check for completion - only call once
   useEffect(() => {
-    if (gameSession.isCompleted) {
+    if (gameSession.isCompleted && !completionHandled) {
+      setCompletionHandled(true);
       onGameComplete(gameSession);
     }
-  }, [gameSession.isCompleted, onGameComplete, gameSession]);
+  }, [gameSession.isCompleted, completionHandled, onGameComplete, gameSession]);
 
   const handleSubmit = () => {
     if (!userAnswer.trim() || showResult) return;

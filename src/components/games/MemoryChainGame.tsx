@@ -24,6 +24,7 @@ export function MemoryChainGame({ session, onGameComplete, onRestart, onExit }: 
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [timeLeft, setTimeLeft] = useState(5);
+  const [completionHandled, setCompletionHandled] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const currentRound = gameSession.rounds[gameSession.currentRoundIndex];
@@ -35,14 +36,16 @@ export function MemoryChainGame({ session, onGameComplete, onRestart, onExit }: 
       setUserInputs([]);
       setShowResult(false);
       setTimeLeft(5);
+      setCompletionHandled(false);
     }
   }, [session.id, gameSession.id]);
 
   useEffect(() => {
-    if (gameSession.isCompleted) {
+    if (gameSession.isCompleted && !completionHandled) {
+      setCompletionHandled(true);
       onGameComplete(gameSession);
     }
-  }, [gameSession.isCompleted, onGameComplete, gameSession]);
+  }, [gameSession.isCompleted, completionHandled, onGameComplete, gameSession]);
 
   useEffect(() => {
     if (phase === 'memorize' && timeLeft > 0) {

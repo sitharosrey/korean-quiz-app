@@ -35,6 +35,7 @@ export function WordScrambleGame({ session, onGameComplete, onRestart, onExit }:
   const [isCorrect, setIsCorrect] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
+  const [completionHandled, setCompletionHandled] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync with prop changes
@@ -45,6 +46,7 @@ export function WordScrambleGame({ session, onGameComplete, onRestart, onExit }:
       setShowResult(false);
       setShowHint(false);
       setHintIndex(0);
+      setCompletionHandled(false);
     }
   }, [session.id, gameSession.id]);
 
@@ -55,12 +57,13 @@ export function WordScrambleGame({ session, onGameComplete, onRestart, onExit }:
     }
   }, [showResult, gameSession.currentWordIndex]);
 
-  // Check for completion
+  // Check for completion - only call once
   useEffect(() => {
-    if (gameSession.isCompleted) {
+    if (gameSession.isCompleted && !completionHandled) {
+      setCompletionHandled(true);
       onGameComplete(gameSession);
     }
-  }, [gameSession.isCompleted, onGameComplete, gameSession]);
+  }, [gameSession.isCompleted, completionHandled, onGameComplete, gameSession]);
 
   const handleSubmit = () => {
     if (!userAnswer.trim() || showResult) return;

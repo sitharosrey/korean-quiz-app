@@ -35,6 +35,7 @@ export function FlashcardGame({ session, onGameComplete, onRestart, onExit }: Fl
   const [showButtons, setShowButtons] = useState(false);
   const [cardStartTime, setCardStartTime] = useState<number>(Date.now());
   const [showHint, setShowHint] = useState(false);
+  const [completionHandled, setCompletionHandled] = useState(false);
 
   // Sync with prop changes
   useEffect(() => {
@@ -43,15 +44,17 @@ export function FlashcardGame({ session, onGameComplete, onRestart, onExit }: Fl
       setIsFlipped(false);
       setShowButtons(false);
       setCardStartTime(Date.now());
+      setCompletionHandled(false);
     }
   }, [session.id, gameSession.id]);
 
-  // Check for completion
+  // Check for completion - only call once
   useEffect(() => {
-    if (gameSession.isCompleted) {
+    if (gameSession.isCompleted && !completionHandled) {
+      setCompletionHandled(true);
       onGameComplete(gameSession);
     }
-  }, [gameSession.isCompleted, onGameComplete, gameSession]);
+  }, [gameSession.isCompleted, completionHandled, onGameComplete, gameSession]);
 
   const currentCard = gameSession.cards[gameSession.currentCardIndex];
   const progress = FlashcardService.getProgress(gameSession);

@@ -20,19 +20,22 @@ export function TrueFalseGame({ session, onGameComplete, onRestart, onExit }: Tr
   const [gameSession, setGameSession] = useState<TrueFalseSession>(session);
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [completionHandled, setCompletionHandled] = useState(false);
 
   useEffect(() => {
     if (gameSession.id !== session.id) {
       setGameSession(session);
       setShowResult(false);
+      setCompletionHandled(false);
     }
   }, [session.id, gameSession.id]);
 
   useEffect(() => {
-    if (gameSession.isCompleted) {
+    if (gameSession.isCompleted && !completionHandled) {
+      setCompletionHandled(true);
       onGameComplete(gameSession);
     }
-  }, [gameSession.isCompleted, onGameComplete, gameSession]);
+  }, [gameSession.isCompleted, completionHandled, onGameComplete, gameSession]);
 
   const handleAnswer = (answer: boolean) => {
     if (showResult) return;

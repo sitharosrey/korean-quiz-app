@@ -33,6 +33,7 @@ export function ListeningPracticeGame({ session, onGameComplete, onRestart, onEx
   const [isCorrect, setIsCorrect] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(false);
+  const [completionHandled, setCompletionHandled] = useState(false);
 
   // Sync with prop changes
   useEffect(() => {
@@ -40,15 +41,17 @@ export function ListeningPracticeGame({ session, onGameComplete, onRestart, onEx
       setGameSession(session);
       setShowResult(false);
       setHasPlayed(false);
+      setCompletionHandled(false);
     }
   }, [session.id, gameSession.id]);
 
-  // Check for completion
+  // Check for completion - only call once
   useEffect(() => {
-    if (gameSession.isCompleted) {
+    if (gameSession.isCompleted && !completionHandled) {
+      setCompletionHandled(true);
       onGameComplete(gameSession);
     }
-  }, [gameSession.isCompleted, onGameComplete, gameSession]);
+  }, [gameSession.isCompleted, completionHandled, onGameComplete, gameSession]);
 
   // Auto-play audio when question changes
   useEffect(() => {

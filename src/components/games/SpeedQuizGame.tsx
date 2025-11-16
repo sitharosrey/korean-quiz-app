@@ -33,6 +33,7 @@ export function SpeedQuizGame({ session, onGameComplete, onRestart, onExit }: Sp
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [bonusPoints, setBonusPoints] = useState(0);
+  const [completionHandled, setCompletionHandled] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync with prop changes
@@ -41,6 +42,7 @@ export function SpeedQuizGame({ session, onGameComplete, onRestart, onExit }: Sp
       setGameSession(session);
       setTimeLeft(session.timeLimit);
       setShowResult(false);
+      setCompletionHandled(false);
     }
   }, [session.id, session.timeLimit, gameSession.id]);
 
@@ -71,12 +73,13 @@ export function SpeedQuizGame({ session, onGameComplete, onRestart, onExit }: Sp
     };
   }, [showResult, gameSession.isCompleted, gameSession.timeLimit, gameSession]);
 
-  // Check for completion
+  // Check for completion - only call once
   useEffect(() => {
-    if (gameSession.isCompleted) {
+    if (gameSession.isCompleted && !completionHandled) {
+      setCompletionHandled(true);
       onGameComplete(gameSession);
     }
-  }, [gameSession.isCompleted, onGameComplete, gameSession]);
+  }, [gameSession.isCompleted, completionHandled, onGameComplete, gameSession]);
 
   const handleAnswer = (answer: string, timeSpent: number) => {
     if (showResult) return;
