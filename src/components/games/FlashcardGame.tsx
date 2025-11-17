@@ -27,9 +27,10 @@ interface FlashcardGameProps {
   onGameComplete: (finalSession: FlashcardSession) => void;
   onRestart: () => void;
   onExit: () => void;
+  onReviewIncorrect?: (session: FlashcardSession) => void;
 }
 
-export function FlashcardGame({ session, onGameComplete, onRestart, onExit }: FlashcardGameProps) {
+export function FlashcardGame({ session, onGameComplete, onRestart, onExit, onReviewIncorrect }: FlashcardGameProps) {
   const [gameSession, setGameSession] = useState<FlashcardSession>(session);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
@@ -92,6 +93,8 @@ export function FlashcardGame({ session, onGameComplete, onRestart, onExit }: Fl
 
   if (gameSession.isCompleted) {
     const stats = FlashcardService.getStats(gameSession);
+    const incorrectWords = FlashcardService.getIncorrectWords(gameSession);
+    const hasIncorrectWords = incorrectWords.length > 0;
 
     return (
       <motion.div
@@ -167,16 +170,70 @@ export function FlashcardGame({ session, onGameComplete, onRestart, onExit }: Fl
               </p>
             </div>
 
+            {/* Incorrect Words List */}
+            {hasIncorrectWords && (
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200 text-left">
+                <h3 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
+                  <XCircle className="w-5 h-5" />
+                  Words to Review ({incorrectWords.length})
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {incorrectWords.map((word, index) => (
+                    <div 
+                      key={word.id} 
+                      className="flex items-center justify-between bg-white p-3 rounded-md shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-gray-400">
+                          {index + 1}.
+                        </span>
+                        {word.imageUrl && (
+                          <div className="w-8 h-8 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                            <img 
+                              src={word.imageUrl} 
+                              alt={word.korean}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {gameSession.direction === 'korean-to-english' ? word.korean : word.english}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {gameSession.direction === 'korean-to-english' ? word.english : word.korean}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
-            <div className="flex gap-3 justify-center">
-              <Button onClick={onExit} variant="outline">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Back to Menu
-              </Button>
-              <Button onClick={onRestart}>
-                <Play className="w-4 h-4 mr-2" />
-                Study Again
-              </Button>
+            <div className="flex flex-col gap-3">
+              {hasIncorrectWords && onReviewIncorrect && (
+                <Button 
+                  onClick={() => onReviewIncorrect(gameSession)}
+                  variant="default"
+                  size="lg"
+                  className="w-full bg-red-600 hover:bg-red-700"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Review Incorrect Words ({incorrectWords.length})
+                </Button>
+              )}
+              <div className="flex gap-3 justify-center">
+                <Button onClick={onExit} variant="outline">
+                  <ChevronRight className="w-4 h-4 mr-2" />
+                  Back to Menu
+                </Button>
+                <Button onClick={onRestart}>
+                  <Play className="w-4 h-4 mr-2" />
+                  Study All Again
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

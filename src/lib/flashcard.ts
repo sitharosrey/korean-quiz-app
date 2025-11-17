@@ -192,5 +192,55 @@ export class FlashcardService {
       cards: [...reviewedCards, ...shuffledRemaining],
     };
   }
+
+  /**
+   * Create a session from specific word pairs (e.g., incorrect words)
+   */
+  static createSessionFromWords(
+    lessonId: string,
+    words: WordPair[],
+    direction: 'korean-to-english' | 'english-to-korean' = 'korean-to-english'
+  ): FlashcardSession {
+    if (words.length === 0) {
+      throw new Error('Cannot create session with no words');
+    }
+
+    // Shuffle the words
+    const shuffledWords = [...words].sort(() => Math.random() - 0.5);
+
+    const cards: FlashcardQuestion[] = shuffledWords.map(word => ({
+      id: `card-${word.id}-${Date.now()}-${Math.random()}`,
+      wordPair: word,
+      front: direction === 'korean-to-english' ? word.korean : word.english,
+      back: direction === 'korean-to-english' ? word.english : word.korean,
+      imageUrl: word.imageUrl,
+    }));
+
+    return {
+      id: `flashcard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      lessonId,
+      cards,
+      currentCardIndex: 0,
+      correctCount: 0,
+      incorrectCount: 0,
+      direction,
+      startTime: new Date(),
+      isCompleted: false,
+      reviewedCards: [],
+    };
+  }
+
+  /**
+   * Get incorrect words from a completed session
+   */
+  static getIncorrectWords(session: FlashcardSession): WordPair[] {
+    const incorrectCardIds = session.reviewedCards
+      .filter(review => !review.isCorrect)
+      .map(review => review.cardId);
+
+    return session.cards
+      .filter(card => incorrectCardIds.includes(card.id))
+      .map(card => card.wordPair);
+  }
 }
 

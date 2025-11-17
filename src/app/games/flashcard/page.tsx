@@ -118,6 +118,28 @@ function FlashcardPageContent() {
     setGameSession(null);
   };
 
+  const handleReviewIncorrect = (completedSession: FlashcardSession) => {
+    const incorrectWords = FlashcardService.getIncorrectWords(completedSession);
+    
+    if (incorrectWords.length === 0) {
+      toast.info('No incorrect words to review!');
+      return;
+    }
+
+    try {
+      const reviewSession = FlashcardService.createSessionFromWords(
+        completedSession.lessonId,
+        incorrectWords,
+        completedSession.direction
+      );
+      setGameSession(reviewSession);
+      toast.success(`Starting review session with ${incorrectWords.length} words`);
+    } catch (error) {
+      toast.error('Failed to create review session');
+      console.error(error);
+    }
+  };
+
   const selectedLesson = lessons.find(l => l.id === selectedLessonId);
 
   if (isLoading) {
@@ -141,6 +163,7 @@ function FlashcardPageContent() {
           onGameComplete={handleGameComplete}
           onRestart={restartGame}
           onExit={exitGame}
+          onReviewIncorrect={handleReviewIncorrect}
         />
       </div>
     );
