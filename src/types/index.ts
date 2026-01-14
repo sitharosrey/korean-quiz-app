@@ -49,7 +49,7 @@ export interface GroqOCRResponse {
   confidence: number;
 }
 
-export type QuizMode = 'multiple-choice' | 'typing' | 'dictation';
+export type QuizMode = 'multiple-choice' | 'typing' | 'dictation' | 'flashcard';
 export type QuizDirection = 'korean-to-english' | 'english-to-korean';
 
 export interface AppSettings {

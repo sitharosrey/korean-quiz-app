@@ -11,6 +11,7 @@ export interface FlashcardQuestion {
 export interface FlashcardSession {
   id: string;
   lessonId: string;
+  lessonIds?: string[]; // Support for multiple lessons
   cards: FlashcardQuestion[];
   currentCardIndex: number;
   correctCount: number;
@@ -241,6 +242,76 @@ export class FlashcardService {
     return session.cards
       .filter(card => incorrectCardIds.includes(card.id))
       .map(card => card.wordPair);
+  }
+
+  /**
+   * Create a flashcard session from multiple lessons
+   * Ensures proportional distribution of words from each lesson
+   */
+  static createSessionFromMultipleLessons(
+    lessons: Lesson[],
+    direction: 'korean-to-english' | 'english-to-korean' = 'korean-to-english',
+    cardCount?: number
+  ): FlashcardSession {
+    // Combine all words from all lessons
+    const allWords: WordPair[] = lessons.flatMap(lesson => lesson.words);
+    
+    if (allWords.length === 0) {
+      throw new Error('Cannot create session with no words');
+    }
+
+    let selectedWords: WordPair[];
+
+    if (cardCount && cardCount < allWords.length && lessons.length > 1) {
+      // Proportionally sample from each lesson to ensure all lessons are represented
+      selectedWords = [];
+      const totalWords = allWords.length;
+      
+      // Calculate how many words to take from each lesson
+      lessons.forEach(lesson => {
+        const lessonWords = [...lesson.words].sort(() => Math.random() - 0.5);
+        const proportion = lesson.words.length / totalWords;
+        // Take at least 1 word from each lesson, proportionally distribute the rest
+        const wordsToTake = Math.max(1, Math.round(cardCount * proportion));
+        selectedWords.push(...lessonWords.slice(0, wordsToTake));
+      });
+
+      // Shuffle the combined selected words
+      selectedWords = selectedWords.sort(() => Math.random() - 0.5);
+      
+      // Trim to exact card count if we went over
+      if (selectedWords.length > cardCount) {
+        selectedWords = selectedWords.slice(0, cardCount);
+      }
+    } else {
+      // No limit or single lesson - shuffle all words
+      const shuffledWords = [...allWords].sort(() => Math.random() - 0.5);
+      selectedWords = cardCount 
+        ? shuffledWords.slice(0, Math.min(cardCount, shuffledWords.length))
+        : shuffledWords;
+    }
+
+    const cards: FlashcardQuestion[] = selectedWords.map(word => ({
+      id: `card-${word.id}-${Date.now()}-${Math.random()}`,
+      wordPair: word,
+      front: direction === 'korean-to-english' ? word.korean : word.english,
+      back: direction === 'korean-to-english' ? word.english : word.korean,
+      imageUrl: word.imageUrl,
+    }));
+
+    return {
+      id: `flashcard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      lessonId: lessons.length === 1 ? lessons[0].id : 'multi-lesson',
+      lessonIds: lessons.map(l => l.id), // Store all lesson IDs
+      cards,
+      currentCardIndex: 0,
+      correctCount: 0,
+      incorrectCount: 0,
+      direction,
+      startTime: new Date(),
+      isCompleted: false,
+      reviewedCards: [],
+    };
   }
 }
 

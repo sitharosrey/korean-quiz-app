@@ -7,6 +7,8 @@ import { Lesson, QuizMode, QuizDirection } from '@/types';
 import { QuizSession } from '@/lib/quiz-enhanced';
 import { StorageService } from '@/lib/storage';
 import { EnhancedQuizService } from '@/lib/quiz-enhanced';
+import { FlashcardSession, FlashcardService } from '@/lib/flashcard';
+import { FlashcardGame } from '@/components/games/FlashcardGame';
 import { EnhancedQuizCard } from '@/components/quiz/EnhancedQuizCard';
 import { QuizResults } from '@/components/quiz/QuizResults';
 import { Button } from '@/components/ui/button';
@@ -32,7 +34,8 @@ import {
   Clock, 
   Zap,
   ArrowLeft,
-  X
+  X,
+  Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -46,6 +49,7 @@ function QuizPageContent() {
   const [quizDirection, setQuizDirection] = useState<QuizDirection>('korean-to-english');
   const [questionCount, setQuestionCount] = useState(10);
   const [quizSession, setQuizSession] = useState<QuizSession | null>(null);
+  const [flashcardSession, setFlashcardSession] = useState<FlashcardSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showExitDialog, setShowExitDialog] = useState(false);
 
@@ -100,6 +104,21 @@ function QuizPageContent() {
     }
 
     try {
+      // Handle flashcard mode separately
+      if (quizMode === 'flashcard') {
+        const session = FlashcardService.createSessionFromMultipleLessons(
+          selectedLessons,
+          quizDirection,
+          Math.min(questionCount, totalWords)
+        );
+        setFlashcardSession(session);
+        const lessonText = selectedLessons.length === 1 
+          ? selectedLessons[0].name 
+          : `${selectedLessons.length} lessons`;
+        toast.success(`Started flashcard review from ${lessonText} with ${session.cards.length} cards`);
+        return;
+      }
+
       const session = EnhancedQuizService.createQuizSession(
         selectedLessons.length === 1 ? selectedLessons[0] : selectedLessons,
         Math.min(questionCount, totalWords),
@@ -155,22 +174,107 @@ function QuizPageContent() {
 
   const restartQuiz = () => {
     setQuizSession(null);
+    setFlashcardSession(null);
     startQuiz();
   };
 
   const handleExitQuiz = () => {
-    if (!quizSession) return;
+    if (!quizSession && !flashcardSession) return;
     setShowExitDialog(true);
   };
 
   const confirmExitQuiz = () => {
     setQuizSession(null);
+    setFlashcardSession(null);
     setShowExitDialog(false);
-    toast.info('Quiz exited. Your progress has been lost.');
+    toast.info('Session exited. Your progress has been lost.');
   };
 
   const cancelExitQuiz = () => {
     setShowExitDialog(false);
+  };
+
+  // Flashcard handlers
+  const handleFlashcardComplete = (finalSession: FlashcardSession) => {
+    const stats = FlashcardService.getStats(finalSession);
+    
+    // Update progress
+    const progress = StorageService.getProgress();
+    const newProgress = {
+      ...progress,
+      totalXP: progress.totalXP + stats.xpEarned,
+      totalQuizzesCompleted: progress.totalQuizzesCompleted + 1,
+      totalTimeSpent: progress.totalTimeSpent + Math.round(stats.timeSpent / 60),
+    };
+    StorageService.saveProgress(newProgress);
+    
+    // Update word difficulties based on results for all lessons
+    const sessionLessonIds = finalSession.lessonIds || [finalSession.lessonId];
+    sessionLessonIds.forEach(lessonId => {
+      const lesson = lessons.find(l => l.id === lessonId);
+      if (lesson) {
+        const updatedWords = lesson.words.map(word => {
+          const reviewed = finalSession.reviewedCards.find(
+            r => finalSession.cards.find(c => c.id === r.cardId)?.wordPair.id === word.id
+          );
+          
+          if (reviewed) {
+            return StorageService.updateWordDifficulty(word, reviewed.isCorrect);
+          }
+          return word;
+        });
+        
+        const updatedLesson = { ...lesson, words: updatedWords };
+        StorageService.updateLesson(updatedLesson);
+      }
+    });
+    
+    loadLessons(); // Reload lessons to reflect changes
+    
+    toast.success(
+      `Flashcard session completed! 🎉 You got ${stats.correct}/${stats.total} correct (${Math.round(stats.accuracy)}%) and earned ${stats.xpEarned} XP!`,
+      { duration: 5000 }
+    );
+  };
+
+  const handleFlashcardRestart = () => {
+    if (!flashcardSession) return;
+    
+    const selectedLessons = lessons.filter(l => selectedLessonIds.includes(l.id));
+    const totalWords = selectedLessons.reduce((sum, lesson) => sum + lesson.words.length, 0);
+    
+    const newSession = FlashcardService.createSessionFromMultipleLessons(
+      selectedLessons,
+      quizDirection,
+      Math.min(questionCount, totalWords)
+    );
+    setFlashcardSession(newSession);
+  };
+
+  const handleFlashcardExit = () => {
+    setFlashcardSession(null);
+  };
+
+  const handleFlashcardReviewIncorrect = (completedSession: FlashcardSession) => {
+    const incorrectWords = FlashcardService.getIncorrectWords(completedSession);
+    
+    if (incorrectWords.length === 0) {
+      toast.info('No incorrect words to review!');
+      return;
+    }
+
+    try {
+      const reviewSession = FlashcardService.createSessionFromWords(
+        completedSession.lessonId,
+        incorrectWords,
+        completedSession.direction
+      );
+      setFlashcardSession(reviewSession);
+      toast.success(`Starting review session with ${incorrectWords.length} words`);
+    } catch (error) {
+      toast.error('Failed to create review session');
+      console.error(error);
+    }
   };
 
   const selectedLessons = lessons.filter(l => selectedLessonIds.includes(l.id));
@@ -186,6 +290,21 @@ function QuizPageContent() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Show flashcard session
+  if (flashcardSession) {
+    return (
+      <PageContainer>
+        <FlashcardGame
+          session={flashcardSession}
+          onGameComplete={handleFlashcardComplete}
+          onRestart={handleFlashcardRestart}
+          onExit={handleFlashcardExit}
+          onReviewIncorrect={handleFlashcardReviewIncorrect}
+        />
+      </PageContainer>
     );
   }
 
@@ -411,6 +530,12 @@ function QuizPageContent() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="flashcard">
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4" />
+                          Flashcard Review
+                        </div>
+                      </SelectItem>
                       <SelectItem value="multiple-choice">
                         <div className="flex items-center gap-2">
                           <Target className="w-4 h-4" />
@@ -523,6 +648,15 @@ function QuizPageContent() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  {quizMode === 'flashcard' && (
+                    <div className="flex items-start gap-3">
+                      <Layers className="w-5 h-5 text-indigo-500 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-gray-900">Flashcard Review</p>
+                        <p className="text-sm text-gray-600">Flip cards to review vocabulary at your own pace</p>
+                      </div>
+                    </div>
+                  )}
                   {quizMode === 'multiple-choice' && (
                     <div className="flex items-start gap-3">
                       <Target className="w-5 h-5 text-blue-500 mt-0.5" />
